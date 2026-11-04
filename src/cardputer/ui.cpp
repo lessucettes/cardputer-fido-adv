@@ -159,6 +159,9 @@ extern "C" void cardputer_ui_pump(void) {
     Model& model = bridge.model();
     const bool mounted = tud_mounted();
     if (mounted != usb_mounted) {
+        if (!mounted) {
+            bridge.cancel(bridge.active_generation(), now);
+        }
         usb_mounted = mounted;
         model.set_usb_mounted(mounted);
     }

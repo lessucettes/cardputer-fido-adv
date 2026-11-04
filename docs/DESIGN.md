@@ -60,10 +60,13 @@ The bridge:
 - consumes a decision exactly once;
 - blocks held/waking keys until every key is released;
 - requires two separate fresh Enters for a host reset;
-- gives Del priority over a simultaneous Enter.
+- shows `Check existing key?` for exclusion checks;
+- gives Del priority over a simultaneous Enter;
+- cancels a pending prompt when USB detaches.
 
-Silent requests (`timeout_seconds == 0` without `FORCE_BUTTON_WAIT`) do not
-create a prompt.
+The ADV build defines `FORCE_BUTTON_WAIT`, so a core request that asks for UP
+gets a 30-second prompt even though the board has no boot-button gesture.
+Requests that do not ask for UP remain silent.
 
 ## Local credentials
 

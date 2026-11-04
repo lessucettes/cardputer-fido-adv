@@ -100,6 +100,19 @@ static void test_timeout(void) {
     require(!bridge.pending(), "timed out request is no longer pending");
 }
 
+static void test_exclusion_prompt() {
+    PresenceBridge bridge;
+    bridge.start(0);
+    const std::uint32_t generation =
+        bridge.begin(RequestKind::Exclusion, "example.com", 11, "alice", 5, 100,
+                     1000);
+    require(std::strcmp(bridge.model().view().title, "Check existing key?") == 0,
+            "exclusion title");
+    tap(bridge, key_enter(), 200);
+    require(bridge.take(generation) == PresenceResult::Confirmed,
+            "exclusion confirmation");
+}
+
 static void test_reset_requires_two_presses() {
     PresenceBridge bridge;
     bridge.start(0);
@@ -150,6 +163,7 @@ int main() {
     test_fresh_presence();
     test_stale_and_cancel();
     test_timeout();
+    test_exclusion_prompt();
     test_reset_requires_two_presses();
     test_bounded_context();
     std::puts("PASS: generation-gated presence and two-stage reset");

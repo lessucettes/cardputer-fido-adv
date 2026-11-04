@@ -28,6 +28,9 @@
 #include "random.h"
 #include "crypto_utils.h"
 #include "event.h"
+#ifdef CARDPUTER_ADV
+#include "ui.h"
+#endif
 
 char *rp_id = NULL, *user_name = NULL, *display_name = NULL;
 size_t rp_id_len = 0;
@@ -487,12 +490,22 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
                     if (credential_load_resident(ef_cred, rp_id_hash, &ecred) == 0 && (ecred.extensions.credProtect != CRED_PROT_UV_REQUIRED || (flags & FIDO2_AUT_FLAG_UV))) {
                         credential_free(&ecred);
                         if (options.up == ptrue || options.present == false || options.up == NULL) {
+#ifdef CARDPUTER_ADV
+                            cardputer_presence_set_kind(3);
+#endif
+                            bool presence_failed = false;
                             if (pinUvAuthParam.present == true) {
-                                if (getUserPresentFlagValue() == false && check_user_presence() == false) {
-                                    CBOR_ERROR(CTAP2_ERR_OPERATION_DENIED);
+                                if (getUserPresentFlagValue() == false) {
+                                    presence_failed = !check_user_presence();
                                 }
                             }
-                            else if (!(flags & FIDO2_AUT_FLAG_UP) && check_user_presence() == false) {
+                            else if (!(flags & FIDO2_AUT_FLAG_UP)) {
+                                presence_failed = !check_user_presence();
+                            }
+#ifdef CARDPUTER_ADV
+                            cardputer_presence_set_kind(-1);
+#endif
+                            if (presence_failed) {
                                 CBOR_ERROR(CTAP2_ERR_OPERATION_DENIED);
                             }
                             flags |= FIDO2_AUT_FLAG_UP;
@@ -509,12 +522,22 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
             if (credential_load(excludeList[e].id.data, excludeList[e].id.len, rp_id_hash, &ecred) == 0 && (ecred.extensions.credProtect != CRED_PROT_UV_REQUIRED || (flags & FIDO2_AUT_FLAG_UV))) {
                 credential_free(&ecred);
                 if (options.up == ptrue || options.present == false || options.up == NULL) {
+#ifdef CARDPUTER_ADV
+                    cardputer_presence_set_kind(3);
+#endif
+                    bool presence_failed = false;
                     if (pinUvAuthParam.present == true) {
-                        if (getUserPresentFlagValue() == false && check_user_presence() == false) {
-                            CBOR_ERROR(CTAP2_ERR_OPERATION_DENIED);
+                        if (getUserPresentFlagValue() == false) {
+                            presence_failed = !check_user_presence();
                         }
                     }
-                    else if (!(flags & FIDO2_AUT_FLAG_UP) && check_user_presence() == false) {
+                    else if (!(flags & FIDO2_AUT_FLAG_UP)) {
+                        presence_failed = !check_user_presence();
+                    }
+#ifdef CARDPUTER_ADV
+                    cardputer_presence_set_kind(-1);
+#endif
+                    if (presence_failed) {
                         CBOR_ERROR(CTAP2_ERR_OPERATION_DENIED);
                     }
                     flags |= FIDO2_AUT_FLAG_UP;

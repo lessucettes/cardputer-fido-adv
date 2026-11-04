@@ -77,7 +77,9 @@ endif()
 if(MAX_PIN_RETRIES)
     add_compile_definitions(MAX_PIN_RETRIES=${MAX_PIN_RETRIES})
 endif()
-if(FORCE_BUTTON_WAIT)
+if(FORCE_BUTTON_WAIT OR CARDPUTER_ADV)
+    # The ADV has no boot button sequence for protocol presence; every core
+    # request that asks for UP must go through the keyboard/display bridge.
     add_compile_definitions(FORCE_BUTTON_WAIT=1)
 endif()
 
