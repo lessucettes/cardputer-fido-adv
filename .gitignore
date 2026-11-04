@@ -10,3 +10,6 @@ pico-keys-sdk/third-party/
 dist/
 *.pyc
 
+# ESP-IDF component manager output; dependencies.lock stays tracked.
+managed_components/
+

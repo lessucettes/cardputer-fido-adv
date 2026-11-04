@@ -1,0 +1,15 @@
+{
+  "profile": "cardputer-adv-fido-store-reference",
+  "description": "Build fixture only. Not an inspected device partition table.",
+  "flash_size": 8388608,
+  "partition": {
+    "label": "fido_store",
+    "type": 64,
+    "subtype": 1,
+    "size": 1056768,
+    "keys_offset": 0,
+    "filesystem_offset": 8192,
+    "filesystem_size": 1048576
+  },
+  "preserved": ["bootloader", "partition_table", "nvs", "otadata", "app0"]
+}

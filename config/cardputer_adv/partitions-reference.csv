@@ -1,0 +1,8 @@
+# Reference partition layout for a Cardputer ADV build fixture.
+# This is NOT the partition table of any specific board and must never be
+# flashed without an explicit, backed-up hardware decision.
+# Name,   Type, SubType, Offset,    Size,     Flags
+nvs,      data, nvs,     0x009000,  0x006000,
+otadata,  data, ota,     0x00F000,  0x002000,
+app0,     app,  ota_0,   0x020000,  0x300000,
+fido_store, 0x40, 0x01,  0x320000,  0x102000,
