@@ -74,8 +74,9 @@ Requests that do not ask for UP remain silent.
 only when no CTAP operation is busy. Delete identities are SHA-256 digests of
 the upstream credential ID, re-resolved at execution time. A stale identity
 returns "not found"; it cannot delete whichever credential now occupies the
-slot. Credentials requiring UV are intentionally omitted from the local list
-rather than weakening their policy.
+slot. Credentials requiring UV appear as an opaque `Protected key` row: their
+RP/account metadata is not shown and local deletion is refused rather than
+weakening their policy.
 
 ## Explicit non-goals
 

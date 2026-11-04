@@ -69,8 +69,8 @@ def run_reconnect_suite(emulator_path: pathlib.Path, cycles: int = 100) -> None:
         assert get_info(hid), "channel unusable after length error"
         print("PASS: oversized HID reports are rejected")
 
-        _, _, malformed = hid.call(CBOR, b"\x04\xff")
-        assert malformed[:1] == b"\x00" and len(malformed) > 1, malformed
+        _, _, malformed = hid.call(CBOR, b"\x01\xff")
+        assert len(malformed) == 1 and malformed[0] != 0, malformed
         assert get_info(hid), "channel unusable after malformed CBOR"
         print("PASS: malformed CBOR returns a protocol error and recovers")
 
