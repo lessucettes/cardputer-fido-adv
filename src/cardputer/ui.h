@@ -23,6 +23,8 @@ uint32_t cardputer_presence_begin(uint32_t timeout_ms, uint8_t operation);
 int cardputer_presence_take(uint32_t generation);
 /* Cancels the matching pending prompt (host CTAPHID CANCEL). */
 void cardputer_presence_cancel(uint32_t generation);
+/* Returns the current request generation; 0 when no prompt is pending. */
+uint32_t cardputer_presence_active(void);
 /* Selects the prompt kind for operations without an OP_MC/OP_GA marker. */
 void cardputer_presence_set_kind(int kind);
 /* Shows a fatal storage message and halts before USB is installed. */

@@ -287,6 +287,13 @@ extern "C" void cardputer_presence_cancel(std::uint32_t generation) {
     ui_unlock();
 }
 
+extern "C" std::uint32_t cardputer_presence_active(void) {
+    ui_lock();
+    const std::uint32_t generation = bridge.active_generation();
+    ui_unlock();
+    return generation;
+}
+
 extern "C" void cardputer_presence_set_kind(int kind) {
     ui_lock();
     presence_kind_override = kind;
@@ -312,4 +319,13 @@ extern "C" void picokey_ui_task(void) {
 
 extern "C" void picokey_storage_failure(int status) {
     cardputer_storage_failure(status);
+}
+
+extern "C" void tud_umount_cb(void) {
+    cardputer_presence_cancel(cardputer_presence_active());
+}
+
+extern "C" void tud_suspend_cb(bool remote_wakeup_en) {
+    (void)remote_wakeup_en;
+    cardputer_presence_cancel(cardputer_presence_active());
 }
