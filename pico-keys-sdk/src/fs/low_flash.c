@@ -151,9 +151,20 @@ static int do_flash_op_erase(uintptr_t addr) {
         return PICOKEYS_ERR_NO_MEMORY;
     }
     uint32_t ints = save_and_disable_interrupts();
+#ifdef ESP_PLATFORM
+    esp_err_t status = flash_range_erase(addr - XIP_BASE, FLASH_SECTOR_SIZE);
+#else
     flash_range_erase(addr - XIP_BASE, FLASH_SECTOR_SIZE);
+#endif
     restore_interrupts(ints);
-    if (multicore_lockout_end_timeout_us(1000) == false) {
+    bool unlocked = multicore_lockout_end_timeout_us(1000);
+#ifdef ESP_PLATFORM
+    /* Keep the dirty page/journal queued when the flash driver fails. */
+    if (status != ESP_OK) {
+        return PICOKEYS_ERR_NO_MEMORY;
+    }
+#endif
+    if (unlocked == false) {
         printf("WARN: FLASH LOCKOUT END TIMEOUT\n");
         return PICOKEYS_EXEC_ERROR;
     }
@@ -166,9 +177,19 @@ static int do_flash_op_program(uintptr_t addr, const uint8_t *data, size_t size)
         return PICOKEYS_ERR_NO_MEMORY;
     }
     uint32_t ints = save_and_disable_interrupts();
+#ifdef ESP_PLATFORM
+    esp_err_t status = flash_range_program(addr - XIP_BASE, data, size);
+#else
     flash_range_program(addr - XIP_BASE, data, size);
+#endif
     restore_interrupts(ints);
-    if (multicore_lockout_end_timeout_us(1000) == false) {
+    bool unlocked = multicore_lockout_end_timeout_us(1000);
+#ifdef ESP_PLATFORM
+    if (status != ESP_OK) {
+        return PICOKEYS_ERR_NO_MEMORY;
+    }
+#endif
+    if (unlocked == false) {
         printf("WARN: FLASH LOCKOUT END TIMEOUT\n");
         return PICOKEYS_EXEC_ERROR;
     }
@@ -181,10 +202,23 @@ static int do_flash_op_erase_program(uintptr_t addr, const uint8_t *data, size_t
         return PICOKEYS_ERR_NO_MEMORY;
     }
     uint32_t ints = save_and_disable_interrupts();
+#ifdef ESP_PLATFORM
+    esp_err_t status = flash_range_erase(addr - XIP_BASE, FLASH_SECTOR_SIZE);
+    if (status == ESP_OK) {
+        status = flash_range_program(addr - XIP_BASE, data, size);
+    }
+#else
     flash_range_erase(addr - XIP_BASE, FLASH_SECTOR_SIZE);
     flash_range_program(addr - XIP_BASE, data, size);
+#endif
     restore_interrupts(ints);
-    if (multicore_lockout_end_timeout_us(1000) == false) {
+    bool unlocked = multicore_lockout_end_timeout_us(1000);
+#ifdef ESP_PLATFORM
+    if (status != ESP_OK) {
+        return PICOKEYS_ERR_NO_MEMORY;
+    }
+#endif
+    if (unlocked == false) {
         printf("WARN: FLASH LOCKOUT END TIMEOUT\n");
         return PICOKEYS_EXEC_ERROR;
     }
@@ -498,7 +532,7 @@ int low_flash_recover_journal(bool force) {
             // For first initialization, journal is found done.
             uint8_t *data_internal = flash_pages[i].page;
             memset(data_internal, 0xFF, sizeof(flash_pages[i].page));
-            memcpy(data_internal, (const uint8_t *)redo, FLASH_SECTOR_SIZE);
+            memcpy(data_internal, flash_read(redo), FLASH_SECTOR_SIZE);
             int ret = do_flash_op_erase_program(target, (const uint8_t *)data_internal, FLASH_SECTOR_SIZE);
             if (ret == PICOKEYS_ERR_NO_MEMORY) {
                 printf("WARN: FLASH RESTORE FAILED\n");

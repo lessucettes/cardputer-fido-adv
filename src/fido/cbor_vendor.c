@@ -176,7 +176,7 @@ static int cbor_vendor_generic(uint8_t cmd, const uint8_t *data, size_t len) {
                 payload[32] = 0x0d;
                 payload[33] = (uint8_t)vendorCmd;
                 memcpy(payload + 34, raw_vendor_params, raw_vendor_params_len);
-                int auth_ret = verify((uint8_t)pinUvAuthProtocol, paut.data, payload, (uint16_t)(34u + raw_vendor_params_len), pinUvAuthParam.data);
+                int auth_ret = verify((uint8_t)pinUvAuthProtocol, paut.data, payload, (uint16_t)(34u + raw_vendor_params_len), pinUvAuthParam.data, pinUvAuthParam.len);
                 free(payload);
                 if (auth_ret != 0 || !(paut.permissions & CTAP_PERMISSION_ACFG)) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);

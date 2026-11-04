@@ -210,6 +210,20 @@ def run_protocol_suite(emulator_path: pathlib.Path,
         assert ctap.info.options.get("rk") is True, "resident keys unavailable"
         print("PASS: GetInfo reports CTAP2 and resident-key support")
 
+        for protocol, auth_size in ((1, 16), (2, 32)):
+            for size in (1, auth_size - 1, auth_size + 1):
+                try:
+                    ctap.get_assertion(
+                        RP["id"], hashlib.sha256(b"malformed-auth").digest(),
+                        pin_uv_param=b"\x00" * size, pin_uv_protocol=protocol,
+                    )
+                except CtapError as exc:
+                    assert exc.code == CtapError.ERR.PIN_AUTH_INVALID, exc
+                else:
+                    raise AssertionError("invalid PIN auth length was accepted")
+                ctap.get_info()
+        print("PASS: malformed PIN auth lengths are rejected without memory errors")
+
         alice = create_user("alice")
         mc = ctap.make_credential(
             hashlib.sha256(b"register-alice").digest(), RP, alice, KEY_PARAMS,
@@ -292,6 +306,30 @@ def run_protocol_suite(emulator_path: pathlib.Path,
             allow_list=[{"type": "public-key", "id": cred_id}]
         )
         print("PASS: session remains usable after a protocol error")
+
+        # A filtered credential before an eligible one exercises ownership
+        # transfer when the candidate array is compacted. Cover credentials
+        # both with and without an explicit extensions map.
+        for index, ordinary_extensions in enumerate((None, {"credProtect": 1})):
+            mixed_rp = {"id": f"mixed-{index}.example", "name": "Mixed policies"}
+            protected = ctap.make_credential(
+                hashlib.sha256(f"protected-{index}".encode()).digest(),
+                mixed_rp, create_user("protected"), KEY_PARAMS,
+                options={"rk": True}, extensions={"credProtect": 3},
+            )
+            assert protected.auth_data.extensions["credProtect"] == 3
+            ordinary = ctap.make_credential(
+                hashlib.sha256(f"ordinary-{index}".encode()).digest(),
+                mixed_rp, create_user("ordinary"), KEY_PARAMS,
+                options={"rk": True}, extensions=ordinary_extensions,
+            )
+            cdh = hashlib.sha256(f"mixed-login-{index}".encode()).digest()
+            discovered = ctap.get_assertions(mixed_rp["id"], cdh)
+            assert len(discovered) == 1
+            assert discovered[0].user["id"] == b"ordinary"
+            discovered[0].verify(cdh, ordinary.auth_data.credential_data.public_key)
+            ctap.get_info()
+        print("PASS: mixed credProtect policies filter safely without corrupting memory")
         hid.close()
 
         emulator.stop()

@@ -278,7 +278,11 @@ int decrypt(uint8_t protocol, const uint8_t *key, const uint8_t *in, uint16_t in
     return -1;
 }
 
-int verify(uint8_t protocol, const uint8_t *key, const uint8_t *data, uint16_t len, uint8_t *sign) {
+int verify(uint8_t protocol, const uint8_t *key, const uint8_t *data, uint16_t len, const uint8_t *sign, size_t sign_len) {
+    const size_t expected_len = protocol == 1 ? 16u : protocol == 2 ? 32u : 0u;
+    if (expected_len == 0 || sign == NULL || sign_len != expected_len) {
+        return -1;
+    }
     uint8_t hmac[32];
     //if (paut.in_use == false)
     //    return -2;
@@ -286,13 +290,7 @@ int verify(uint8_t protocol, const uint8_t *key, const uint8_t *data, uint16_t l
     if (ret != 0) {
         return ret;
     }
-    if (protocol == 1) {
-        return mbedtls_ct_memcmp(sign, hmac, 16);
-    }
-    else if (protocol == 2) {
-        return mbedtls_ct_memcmp(sign, hmac, 32);
-    }
-    return -1;
+    return mbedtls_ct_memcmp(sign, hmac, expected_len);
 }
 
 int verify_hmac_secret(uint8_t protocol, const uint8_t *key, const uint8_t *data, uint16_t len, const uint8_t *sign, uint16_t sign_len) {
@@ -518,7 +516,7 @@ int cbor_client_pin(const uint8_t *data, size_t len) {
             mbedtls_platform_zeroize(sharedSecret, sizeof(sharedSecret));
             CBOR_ERROR(CTAP1_ERR_INVALID_PARAMETER);
         }
-        if (verify((uint8_t)pinUvAuthProtocol, sharedSecret, newPinEnc.data, (uint16_t)newPinEnc.len, pinUvAuthParam.data) != 0) {
+        if (verify((uint8_t)pinUvAuthProtocol, sharedSecret, newPinEnc.data, (uint16_t)newPinEnc.len, pinUvAuthParam.data, pinUvAuthParam.len) != 0) {
             mbedtls_platform_zeroize(sharedSecret, sizeof(sharedSecret));
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }
@@ -615,7 +613,7 @@ int cbor_client_pin(const uint8_t *data, size_t len) {
         uint8_t tmp[256 + IV_SIZE + 32];
         memcpy(tmp, newPinEnc.data, newPinEnc.len);
         memcpy(tmp + newPinEnc.len, pinHashEnc.data, pinHashEnc.len);
-        if (verify((uint8_t)pinUvAuthProtocol, sharedSecret, tmp, (uint16_t)(newPinEnc.len + pinHashEnc.len), pinUvAuthParam.data) != 0) {
+        if (verify((uint8_t)pinUvAuthProtocol, sharedSecret, tmp, (uint16_t)(newPinEnc.len + pinHashEnc.len), pinUvAuthParam.data, pinUvAuthParam.len) != 0) {
             mbedtls_platform_zeroize(sharedSecret, sizeof(sharedSecret));
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }

@@ -465,7 +465,7 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
     }
     if (!((get_opts() & FIDO2_OPT_MCUV_NOTRQD) && options.rk != ptrue && options.uv != ptrue && pinUvAuthParam.present == false)) { //10.1
         if (pinUvAuthParam.present == true) { //11.1
-            int ret = verify((uint8_t)pinUvAuthProtocol, paut.data, clientDataHash.data, (uint16_t)clientDataHash.len, pinUvAuthParam.data);
+            int ret = verify((uint8_t)pinUvAuthProtocol, paut.data, clientDataHash.data, (uint16_t)clientDataHash.len, pinUvAuthParam.data, pinUvAuthParam.len);
             if (ret != CborNoError) {
                 CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
             }

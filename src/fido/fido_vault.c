@@ -79,7 +79,7 @@ static int vault_pin_auth(uint8_t protocol, const CborByteString *auth, const ui
     if (raw_params_len) {
         memcpy(payload + 34, raw_params, raw_params_len);
     }
-    int ret = verify(protocol, paut.data, payload, (uint16_t)(34u + raw_params_len), auth->data);
+    int ret = verify(protocol, paut.data, payload, (uint16_t)(34u + raw_params_len), auth->data, auth->len);
     free(payload);
     if (ret != 0 || !(paut.permissions & CTAP_PERMISSION_ACFG)) {
         log_errstr("vault auth: verification or permission check failed ret=%d permissions=0x%02x required=0x%02x", ret, paut.permissions, CTAP_PERMISSION_ACFG);

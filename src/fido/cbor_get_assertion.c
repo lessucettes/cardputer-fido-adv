@@ -330,7 +330,7 @@ int cbor_get_assertion(const uint8_t *data, size_t len, bool next) {
         }
 
         if (pinUvAuthParam.present == true) { //6.1
-            int ret = verify((uint8_t)pinUvAuthProtocol, paut.data, clientDataHash.data, (uint16_t)clientDataHash.len, pinUvAuthParam.data);
+            int ret = verify((uint8_t)pinUvAuthProtocol, paut.data, clientDataHash.data, (uint16_t)clientDataHash.len, pinUvAuthParam.data, pinUvAuthParam.len);
             if (ret != CborNoError) {
                 CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
             }
@@ -453,6 +453,8 @@ int cbor_get_assertion(const uint8_t *data, size_t len, bool next) {
                     else {
                         if (numberOfCredentials != i) {
                             creds[numberOfCredentials++] = creds[i];
+                            /* Transfer ownership; cleanup also visits the source slot. */
+                            memset(&creds[i], 0, sizeof(creds[i]));
                         }
                         else {
                             numberOfCredentials++;
@@ -462,6 +464,7 @@ int cbor_get_assertion(const uint8_t *data, size_t len, bool next) {
                 else {
                     if (numberOfCredentials != i) {
                         creds[numberOfCredentials++] = creds[i];
+                        memset(&creds[i], 0, sizeof(creds[i]));
                     }
                     else {
                         numberOfCredentials++;
