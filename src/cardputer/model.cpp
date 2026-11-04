@@ -67,9 +67,6 @@ void Model::set_screen_timeout(std::uint64_t milliseconds) {
 
 void Model::note_activity(std::uint64_t now) {
     last_activity_ = now;
-    if (screen_on_) {
-        return;
-    }
 }
 
 void Model::tick(std::uint64_t now) {
@@ -91,7 +88,13 @@ void Model::set_settings(const Settings& settings) {
 }
 
 void Model::set_saved_keys(const SavedKey* keys, int count) {
-    saved_key_count_ = clamp_index(count, kMaxSavedKeys);
+    if (count < 0) {
+        count = 0;
+    }
+    if (count > kMaxSavedKeys) {
+        count = kMaxSavedKeys;
+    }
+    saved_key_count_ = count;
     if (keys != nullptr) {
         for (int i = 0; i < saved_key_count_; ++i) {
             saved_keys_[i] = keys[i];

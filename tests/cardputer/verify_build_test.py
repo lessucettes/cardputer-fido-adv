@@ -94,6 +94,13 @@ class BuildPolicyTest(unittest.TestCase):
         self.make_fixture(map_text="otp_esp32.c.o\nkey_store.c.o\n")
         self.assertTrue(self.checker.check_build(self.build))
 
+    def test_original_otp_source_in_compile_db_fails(self):
+        self.make_fixture()
+        (self.build / "compile_commands.json").write_text(
+            '[{"file": "otp_esp32.c"}]', encoding="utf-8"
+        )
+        self.assertTrue(self.checker.check_build(self.build))
+
     def test_missing_replacement_object_fails(self):
         self.make_fixture(map_text="key_store.c.o\n")
         self.assertTrue(self.checker.check_build(self.build))

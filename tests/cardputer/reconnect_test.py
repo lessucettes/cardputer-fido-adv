@@ -98,6 +98,15 @@ def run_reconnect_suite(emulator_path: pathlib.Path, cycles: int = 100) -> None:
         fresh = CtapHidTcp()
         fresh.init()
         assert get_info(fresh)
+        fresh.sock.settimeout(0.3)
+        fresh.send_cont(fresh.cid, 0, b"\x00" * 59)
+        try:
+            fresh.read_message()
+        except TimeoutError:
+            pass
+        else:
+            raise AssertionError("stale continuation produced a response")
+        fresh.sock.settimeout(10)
         fresh.close()
         hid.close()
         print("PASS: disconnect discards the stale request")

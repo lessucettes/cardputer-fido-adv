@@ -669,45 +669,6 @@ if(PICO_PLATFORM)
     pico_sdk_init()
 endif()
 
-if(ESP_PLATFORM)
-    if(NOT CARDPUTER_ADV)
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_esp32.c
-        )
-    endif()
-elseif(ENABLE_EMULATION)
-    if(ENABLE_DETERMINISTIC_OTP)
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_file.c
-        )
-    elseif(MSVC)
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_windows.c
-        )
-    elseif(APPLE)
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_macos.c
-        )
-    elseif(UNIX AND NOT APPLE)
-        add_compile_definitions(OTP_LINUX_USE_TSS=1)
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_linux.c
-        )
-    else()
-        list(APPEND PICOKEYS_SOURCES
-            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_emulation.c
-        )
-    endif()
-elseif(PICO_RP2350)
-    list(APPEND PICOKEYS_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_rp2350.c
-    )
-elseif(PICO_RP2040)
-    list(APPEND PICOKEYS_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_rp2040.c
-    )
-endif()
-
 if(USB_ITF_LWIP)
     list(APPEND PICOKEYS_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/src/usb/lwip/rest.c

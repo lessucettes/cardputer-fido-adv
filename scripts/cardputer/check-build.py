@@ -83,6 +83,10 @@ def check_build(build_dir: str | pathlib.Path) -> list[str]:
             if needle in text:
                 errors.append(f"forbidden provisioning object in map: {needle}")
 
+    compile_db = build / "compile_commands.json"
+    if compile_db.is_file() and "otp_esp32.c" in _read(compile_db):
+        errors.append("forbidden provisioning source in compile_commands.json")
+
     return errors
 
 

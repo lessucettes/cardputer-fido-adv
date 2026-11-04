@@ -267,6 +267,18 @@ def run_protocol_suite(emulator_path: pathlib.Path,
         eve_assertion.verify(eve_cdh, eve_mc.auth_data.credential_data.public_key)
         print("PASS: nonresident credential signs only when explicitly listed")
 
+        try:
+            ctap.make_credential(
+                hashlib.sha256(b"register-eve-again").digest(), RP, eve,
+                KEY_PARAMS,
+                exclude_list=[{"type": "public-key", "id": eve_id}],
+            )
+        except CtapError as exc:
+            assert exc.code == CtapError.ERR.CREDENTIAL_EXCLUDED, exc
+        else:
+            raise AssertionError("nonresident exclusion list was ignored")
+        print("PASS: nonresident exclusion is rejected")
+
         wrong_rejected = False
         try:
             ctap.get_assertion("wrong.example", hashlib.sha256(b"wrong-rp").digest())

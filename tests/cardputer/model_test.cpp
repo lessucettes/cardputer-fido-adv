@@ -201,6 +201,18 @@ static void test_saved_keys() {
     require(std::strcmp(v.title, "Saved Keys") == 0, "Del returns to list");
 }
 
+static void test_saved_keys_boundary() {
+    Model m;
+    m.start(0);
+    SavedKey keys[Model::kMaxSavedKeys] = {};
+    m.set_saved_keys(keys, Model::kMaxSavedKeys);
+    require(m.saved_key_count() == Model::kMaxSavedKeys,
+            "all 32 saved keys are retained");
+    m.set_saved_keys(keys, Model::kMaxSavedKeys + 1);
+    require(m.saved_key_count() == Model::kMaxSavedKeys,
+            "saved-key count is bounded");
+}
+
 static void test_settings() {
     Model m;
     m.start(0);
@@ -280,6 +292,7 @@ int main() {
     test_appendix_a();
     test_main_menu();
     test_saved_keys();
+    test_saved_keys_boundary();
     test_settings();
     test_request_overlay();
     test_screen_off_snapshot();
