@@ -85,6 +85,8 @@ def safe_output_dir(out_dir: pathlib.Path) -> pathlib.Path:
     dist = (root / "dist").resolve()
     if resolved == root or resolved in root.parents:
         raise ValueError("refusing to use a repository ancestor as output")
+    if resolved == dist:
+        raise ValueError("refusing to replace the dist root")
     if resolved.is_relative_to(root) and not resolved.is_relative_to(dist):
         raise ValueError("refusing to replace a repository source directory")
     return out_dir
