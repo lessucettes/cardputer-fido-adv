@@ -42,11 +42,6 @@ def _read(path: pathlib.Path) -> str:
         return f"__READ_ERROR__:{exc}"
 
 
-def _single(build: pathlib.Path, pattern: str) -> pathlib.Path | None:
-    matches = sorted(build.glob(pattern))
-    return matches[0] if matches else None
-
-
 def check_build(build_dir: str | pathlib.Path) -> list[str]:
     build = pathlib.Path(build_dir)
     errors: list[str] = []
@@ -65,19 +60,19 @@ def check_build(build_dir: str | pathlib.Path) -> list[str]:
             if needle in text:
                 errors.append(f"forbidden {needle}: {reason}")
 
-    elf = _single(build, "*.elf")
-    binary = _single(build, "*.bin")
-    if elf is None:
+    elf = build / "pico_fido.elf"
+    binary = build / "pico_fido.bin"
+    map_file = build / "pico_fido.map"
+    if not elf.is_file():
         errors.append("missing ELF artifact")
-    if binary is None:
+    if not binary.is_file():
         errors.append("missing application .bin artifact")
-    if elf is not None and elf.stat().st_size == 0:
+    if elf.is_file() and elf.stat().st_size == 0:
         errors.append("empty ELF artifact")
-    if binary is not None and binary.stat().st_size == 0:
+    if binary.is_file() and binary.stat().st_size == 0:
         errors.append("empty application .bin artifact")
 
-    map_file = _single(build, "*.map")
-    if map_file is None:
+    if not map_file.is_file():
         errors.append("missing linker map")
     else:
         text = _read(map_file)

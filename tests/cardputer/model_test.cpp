@@ -153,6 +153,10 @@ static void test_saved_keys() {
     Model m;
     m.start(0);
     tap(m, key_enter(), 100);
+    Action list_action;
+    require(m.take_action(&list_action), "entering Saved Keys requests the list");
+    require(list_action.type == ActionType::OpenSavedKeys,
+            "saved keys entry emits a list action");
     Snapshot v = m.view();
     require(std::strcmp(v.title, "Saved Keys") == 0, "saved keys title");
     require(v.row_count == 1 && std::strcmp(v.rows[0].text, "No saved keys") == 0,

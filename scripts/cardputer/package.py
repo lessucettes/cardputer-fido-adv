@@ -79,6 +79,17 @@ def validate_app_image(path: pathlib.Path) -> None:
         raise ValueError(f"refusing to package {path.name}")
 
 
+def safe_output_dir(out_dir: pathlib.Path) -> pathlib.Path:
+    resolved = out_dir.resolve()
+    root = ROOT.resolve()
+    dist = (root / "dist").resolve()
+    if resolved == root or resolved in root.parents:
+        raise ValueError("refusing to use a repository ancestor as output")
+    if resolved.is_relative_to(root) and not resolved.is_relative_to(dist):
+        raise ValueError("refusing to replace a repository source directory")
+    return out_dir
+
+
 def package(build_dir: pathlib.Path, out_dir: pathlib.Path,
             force: bool = False) -> dict:
     checker = load_checker()
@@ -91,6 +102,7 @@ def package(build_dir: pathlib.Path, out_dir: pathlib.Path,
         raise ValueError("missing pico_fido.bin")
     validate_app_image(app)
 
+    safe_output_dir(out_dir)
     if out_dir.exists() and any(out_dir.iterdir()):
         if not force:
             raise ValueError(f"output directory is not empty: {out_dir}")

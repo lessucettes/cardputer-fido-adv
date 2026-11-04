@@ -35,6 +35,7 @@
   #include "flash_layout.h"
   #ifdef CARDPUTER_ADV
    #include "key_store_esp32.h"
+   #include "ui.h"
   #endif
   const esp_partition_t *part0;
   #define save_and_disable_interrupts() 1
@@ -578,6 +579,9 @@ void low_flash_init(void) {
         data_start_addr = 0;
         data_end_addr = 0;
         FLASH_SIZE_BYTES = 0;
+#ifdef CARDPUTER_ADV
+        cardputer_storage_failure(-1);
+#endif
         return;
     }
     esp_err_t map_ret = esp_partition_mmap(part0, CF_FIDO_FS_OFFSET, CF_FIDO_FS_SIZE,
@@ -590,6 +594,9 @@ void low_flash_init(void) {
         data_start_addr = 0;
         data_end_addr = 0;
         FLASH_SIZE_BYTES = 0;
+#ifdef CARDPUTER_ADV
+        cardputer_storage_failure(-1);
+#endif
         return;
     }
     data_start_addr = 0;

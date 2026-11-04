@@ -98,6 +98,12 @@ static void test_invalid_layouts(void) {
             "store beyond flash rejected");
     parts[4].offset = 0x110000;
 
+    cf_partition_desc reserved[2];
+    reserved[0] = partition("fido_store", 0x40, 0x01, 0x0, 0x102000);
+    reserved[1] = partition("app0", 0x00, 0x10, 0x200000, 0x100000);
+    require(validate(reserved, 2) == CF_LAYOUT_OVERLAP,
+            "store over bootloader/partition table rejected");
+
     parts[3].size = 0x101000;
     require(validate(parts, count) == CF_LAYOUT_OVERLAP,
             "overlap with app rejected");

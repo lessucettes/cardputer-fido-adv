@@ -11,6 +11,7 @@
 #define CF_FIDO_KEYS_OFFSET 0x0u
 #define CF_FIDO_FS_OFFSET 0x2000u
 #define CF_FIDO_FS_SIZE 0x100000u
+#define CF_FLASH_RESERVED_SIZE 0x9000u
 #define CF_MAX_PARTITIONS 32u
 
 #ifdef __cplusplus

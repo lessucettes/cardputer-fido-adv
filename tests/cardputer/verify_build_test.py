@@ -103,6 +103,12 @@ class BuildPolicyTest(unittest.TestCase):
         (self.build / "pico_fido.bin").unlink()
         self.assertTrue(self.checker.check_build(self.build))
 
+    def test_ota_stub_does_not_satisfy_application_image(self):
+        self.make_fixture()
+        (self.build / "pico_fido.bin").unlink()
+        (self.build / "ota_data_initial.bin").write_bytes(b"ota stub")
+        self.assertTrue(self.checker.check_build(self.build))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -181,6 +181,7 @@ void Model::navigate(Keys keys) {
                 switch (main_index_) {
                     case 0:
                         screen_ = Screen::SavedKeys;
+                        action_.type = ActionType::OpenSavedKeys;
                         break;
                     case 1:
                         screen_ = Screen::Settings;

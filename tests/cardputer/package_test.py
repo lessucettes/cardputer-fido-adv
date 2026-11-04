@@ -43,7 +43,8 @@ class PackageTest(unittest.TestCase):
         (self.build / "pico_fido.elf").write_bytes(b"elf")
         (self.build / "pico_fido.bin").write_bytes(app_image())
         (self.build / "pico_fido.map").write_text(
-            "key_store_esp32.c.o\nkey_store.c.o\nflash_layout.c.o\n",
+            "key_store_esp32.c.o\nkey_store.c.o\nflash_layout.c.o\n"
+            "ui.cpp.obj\npicokey_board_init\npicokey_ui_task\n",
             encoding="utf-8",
         )
         self.packager = load_packager()
@@ -70,6 +71,10 @@ class PackageTest(unittest.TestCase):
         names = {item.name for item in self.out.iterdir()}
         self.assertNotIn("bootloader.bin", names)
         self.assertNotIn("partition-table.bin", names)
+
+    def test_refuses_repository_source_output(self):
+        with self.assertRaises(ValueError):
+            self.packager.package(self.build, ROOT / "src", force=True)
 
     def test_invalid_app_image_refuses(self):
         (self.build / "pico_fido.bin").write_bytes(b"\x00" * 256)

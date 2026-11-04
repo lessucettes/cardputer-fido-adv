@@ -96,8 +96,9 @@ static int validate_partition_table(void) {
         }
         iterator = esp_partition_next(iterator);
     }
+    const bool too_many = iterator != NULL;
     esp_partition_iterator_release(iterator);
-    if (count == CF_MAX_PARTITIONS) {
+    if (too_many) {
         return -(int)CF_LAYOUT_TOO_MANY;
     }
     uint32_t flash_size = 0;

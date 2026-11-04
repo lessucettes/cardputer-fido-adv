@@ -69,6 +69,12 @@ cf_layout_status cf_flash_layout_validate(const cf_partition_desc *partitions,
     if (store->size != CF_FIDO_STORE_SIZE) {
         return CF_LAYOUT_WRONG_SIZE;
     }
+    /* Bootloader and partition table are not reported by esp_partition_find,
+     * so reserve the first 0x9000 bytes explicitly. */
+    if (store->offset < CF_FLASH_RESERVED_SIZE &&
+        store->size >= CF_FLASH_RESERVED_SIZE - store->offset) {
+        return CF_LAYOUT_OVERLAP;
+    }
     if ((store->offset % 0x1000u) != 0) {
         return CF_LAYOUT_NOT_ALIGNED;
     }
