@@ -67,6 +67,25 @@ supported Launcher flow. The normal package contains:
 It does **not** contain a bootloader, partition table, blank credential
 database, eFuse script or SD-card data.
 
+## Source-derived finding (not hardware proof)
+
+The pinned Launcher revision `e9d631e0cb2eaf49243fcff62235adac4f44fcb0`
+was inspected read-only:
+
+- `src/partition_table_model.cpp::launcherPartitionParseInternal` parses every
+  entry, including unknown types.
+- `launcherPartitionFreeRanges` treats all parsed entries as occupied, so app
+  placement does not reuse the `fido_store` range.
+- `launcherPartitionCreateOtaApp` adds an app entry; the app-install path in
+  `src/sd_functions.cpp::installFromSdDynamic` then writes the complete table
+  with `launcherPartitionWriteGeneratedTable`.
+- No inspected app-install path removes an unknown type-`0x40` partition.
+
+This supports, but does not prove, app-only update preservation. The same
+revision's creation UI still offers only app/FAT/SPIFFS-style data partitions,
+so ordinary installation does not create `fido_store`. A real update/other-app
+round trip on the recorded candidate remains required.
+
 ## Updates and other-app round trip
 
 Normal firmware updates must be app-only through Launcher. Before claiming
