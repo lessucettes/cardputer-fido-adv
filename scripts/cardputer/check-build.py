@@ -24,7 +24,14 @@ REQUIRED = {
     "CONFIG_TINYUSB_RHPORT_FS=y": "TinyUSB full-speed device stack is required",
     "CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y": "reference flash capacity is 8 MB",
 }
-REQUIRED_MAP = ("key_store_esp32.c", "key_store.c", "flash_layout.c")
+REQUIRED_MAP = (
+    "key_store_esp32.c",
+    "key_store.c",
+    "flash_layout.c",
+    "ui.cpp",
+    "picokey_board_init",
+    "picokey_ui_task",
+)
 FORBIDDEN_MAP = ("otp_esp32.c",)
 
 

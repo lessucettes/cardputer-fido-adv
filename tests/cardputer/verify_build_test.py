@@ -40,6 +40,9 @@ class BuildPolicyTest(unittest.TestCase):
                 "key_store_esp32.c.o\n"
                 "key_store.c.o\n"
                 "flash_layout.c.o\n"
+                "ui.cpp.obj\n"
+                "picokey_board_init\n"
+                "picokey_ui_task\n"
             )
         (self.build / "pico_fido.map").write_text(map_text, encoding="utf-8")
 
