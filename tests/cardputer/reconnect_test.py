@@ -107,7 +107,7 @@ def run_reconnect_suite(emulator_path: pathlib.Path, cycles: int = 100) -> None:
             cycle.init()
             assert get_info(cycle), f"GetInfo failed in cycle {index}"
             cycle.close()
-        print(f"PASS: {cycles} request/INIT/reconnect cycles")
+        print(f"PASS: {cycles} INIT/GetInfo/reconnect cycles")
     finally:
         emulator.stop()
 

@@ -122,7 +122,7 @@ int cbor_reset(void) {
     }
 #endif
 #ifdef CARDPUTER_ADV
-    cardputer_presence_set_kind(4);
+    cardputer_presence_set_kind(CF_PRESENCE_KIND_RESET);
 #endif
     int ret = wait_button_pressed();
     if (ret == 1) {

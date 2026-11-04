@@ -5,6 +5,10 @@
 #include "M5Unified.h"
 #include "board.h"
 #include "credential_service.h"
+#ifdef ESP_PLATFORM
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#endif
 extern "C" {
 #include "file.h"
 #include "flash.h"
@@ -17,6 +21,7 @@ extern "C" {
 extern char* rp_id;
 extern std::size_t rp_id_len;
 extern char* user_name;
+extern bool is_busy(void);
 
 cf_credential_backend cardputer_credentials_backend(void) __attribute__((weak));
 }
@@ -27,6 +32,15 @@ namespace {
 constexpr std::uint8_t kOpMakeCredential = 1;
 constexpr std::uint8_t kOpGetAssertion = 2;
 
+static_assert(static_cast<int>(RequestKind::Exclusion) ==
+                  CF_PRESENCE_KIND_EXCLUSION,
+              "exclusion prompt kind must match the C protocol core");
+static_assert(static_cast<int>(RequestKind::Reset) == CF_PRESENCE_KIND_RESET,
+              "reset prompt kind must match the C protocol core");
+static_assert(static_cast<int>(RequestKind::Selection) ==
+                  CF_PRESENCE_KIND_SELECTION,
+              "selection prompt kind must match the C protocol core");
+
 Board board;
 PresenceBridge bridge;
 cf_credential_service credentials;
@@ -35,6 +49,25 @@ Settings saved_settings;
 bool usb_mounted = false;
 int presence_kind_override = -1;
 uint32_t last_tone_generation = 0;
+
+#ifdef ESP_PLATFORM
+SemaphoreHandle_t ui_mutex = nullptr;
+
+void ui_lock() {
+    if (ui_mutex != nullptr) {
+        xSemaphoreTake(ui_mutex, portMAX_DELAY);
+    }
+}
+
+void ui_unlock() {
+    if (ui_mutex != nullptr) {
+        xSemaphoreGive(ui_mutex);
+    }
+}
+#else
+void ui_lock() {}
+void ui_unlock() {}
+#endif
 
 void apply_settings(const Settings& settings) {
     board.set_brightness(settings.brightness);
@@ -136,6 +169,12 @@ void pump_credentials() {
 using namespace cardputer;
 
 extern "C" void cardputer_ui_init(void) {
+#ifdef ESP_PLATFORM
+    if (ui_mutex == nullptr) {
+        ui_mutex = xSemaphoreCreateMutex();
+    }
+#endif
+    ui_lock();
     board.begin();
     bridge.start(Board::now_ms());
     if (load_settings(&saved_settings)) {
@@ -151,9 +190,11 @@ extern "C" void cardputer_ui_init(void) {
         backend = cardputer_credentials_backend();
     }
     cf_credential_service_init(&credentials, backend);
+    ui_unlock();
 }
 
 extern "C" void cardputer_ui_pump(void) {
+    ui_lock();
     const std::uint64_t now = Board::now_ms();
     board.poll_input();
     bridge.key_snapshot(board.keys(), now);
@@ -188,17 +229,21 @@ extern "C" void cardputer_ui_pump(void) {
         apply_settings(model.settings());
     }
 
-    pump_credentials();
+    if (!is_busy()) {
+        pump_credentials();
+    }
 
     if (bridge.pending() && bridge.active_generation() != last_tone_generation) {
         last_tone_generation = bridge.active_generation();
         board.play(Tone::Request);
     }
     board.render(model.view());
+    ui_unlock();
 }
 
 extern "C" std::uint32_t cardputer_presence_begin(std::uint32_t timeout_ms,
                                                    std::uint8_t operation) {
+    ui_lock();
     RequestKind kind = RequestKind::Generic;
     if (presence_kind_override >= 0) {
         kind = static_cast<RequestKind>(presence_kind_override);
@@ -212,12 +257,18 @@ extern "C" std::uint32_t cardputer_presence_begin(std::uint32_t timeout_ms,
     const std::size_t account_len = user_name != nullptr ? std::strlen(user_name) : 0;
     const char* rp = (kind == RequestKind::Reset) ? nullptr : rp_id;
     const std::size_t rp_len = rp != nullptr ? rp_id_len : 0;
-    return bridge.begin(kind, rp, rp_len, account, account_len, Board::now_ms(),
-                        timeout_ms != 0 ? timeout_ms : 30000);
+    const std::uint32_t generation =
+        bridge.begin(kind, rp, rp_len, account, account_len, Board::now_ms(),
+                     timeout_ms != 0 ? timeout_ms : 30000);
+    ui_unlock();
+    return generation;
 }
 
 extern "C" int cardputer_presence_take(std::uint32_t generation) {
-    switch (bridge.take(generation)) {
+    ui_lock();
+    const PresenceResult result = bridge.take(generation);
+    ui_unlock();
+    switch (result) {
         case PresenceResult::Confirmed:
             return 0;
         case PresenceResult::TimedOut:
@@ -231,7 +282,9 @@ extern "C" int cardputer_presence_take(std::uint32_t generation) {
 }
 
 extern "C" void cardputer_presence_set_kind(int kind) {
+    ui_lock();
     presence_kind_override = kind;
+    ui_unlock();
 }
 
 extern "C" void cardputer_storage_failure(int status) {
@@ -240,4 +293,17 @@ extern "C" void cardputer_storage_failure(int status) {
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+}
+
+extern "C" int picokey_board_init(void) {
+    cardputer_ui_init();
+    return 0;
+}
+
+extern "C" void picokey_ui_task(void) {
+    cardputer_ui_pump();
+}
+
+extern "C" void picokey_storage_failure(int status) {
+    cardputer_storage_failure(status);
 }

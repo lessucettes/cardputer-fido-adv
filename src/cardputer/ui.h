@@ -5,6 +5,14 @@
 extern "C" {
 #endif
 
+/* Prompt kinds shared with the C protocol core. Keep in sync with
+ * cardputer::RequestKind; ui.cpp asserts the values at compile time. */
+enum {
+    CF_PRESENCE_KIND_EXCLUSION = 3,
+    CF_PRESENCE_KIND_RESET = 4,
+    CF_PRESENCE_KIND_SELECTION = 5
+};
+
 /* Called once before random/OTP initialization. */
 void cardputer_ui_init(void);
 /* Called from the owner loop; nonblocking. */

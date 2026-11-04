@@ -36,6 +36,20 @@ char *rp_id = NULL, *user_name = NULL, *display_name = NULL;
 size_t rp_id_len = 0;
 uint8_t current_fido_operation = OP_NONE;
 
+static void copy_presence_account(const CborCharString *source, char *out,
+                                  size_t capacity) {
+    if (source == NULL || !source->present || source->data == NULL ||
+        capacity == 0) {
+        return;
+    }
+    size_t length = source->len;
+    if (length >= capacity) {
+        length = capacity - 1;
+    }
+    memcpy(out, source->data, length);
+    out[length] = '\0';
+}
+
 static bool minpin_contains_rp(const uint8_t *rp_id_hash) {
     file_t *ef_minpin = file_search_by_fid(EF_MINPINLEN, NULL, SPECIFY_EF);
     if (!file_has_data(ef_minpin)) {
@@ -488,11 +502,18 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
                 }
                 if (credential_resident_matches_id(ef_cred, excludeList[e].id.data, excludeList[e].id.len)) {
                     if (credential_load_resident(ef_cred, rp_id_hash, &ecred) == 0 && (ecred.extensions.credProtect != CRED_PROT_UV_REQUIRED || (flags & FIDO2_AUT_FLAG_UV))) {
+                        char exclusion_account[65] = {0};
+                        copy_presence_account(&ecred.userName, exclusion_account,
+                                             sizeof(exclusion_account));
                         credential_free(&ecred);
                         if (options.up == ptrue || options.present == false || options.up == NULL) {
 #ifdef CARDPUTER_ADV
-                            cardputer_presence_set_kind(3);
+                            cardputer_presence_set_kind(CF_PRESENCE_KIND_EXCLUSION);
 #endif
+                            char* saved_user_name = user_name;
+                            if (exclusion_account[0] != '\0') {
+                                user_name = exclusion_account;
+                            }
                             bool presence_failed = false;
                             if (pinUvAuthParam.present == true) {
                                 if (getUserPresentFlagValue() == false) {
@@ -502,6 +523,7 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
                             else if (!(flags & FIDO2_AUT_FLAG_UP)) {
                                 presence_failed = !check_user_presence();
                             }
+                            user_name = saved_user_name;
 #ifdef CARDPUTER_ADV
                             cardputer_presence_set_kind(-1);
 #endif
@@ -520,11 +542,18 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
         }
         else {
             if (credential_load(excludeList[e].id.data, excludeList[e].id.len, rp_id_hash, &ecred) == 0 && (ecred.extensions.credProtect != CRED_PROT_UV_REQUIRED || (flags & FIDO2_AUT_FLAG_UV))) {
+                char exclusion_account[65] = {0};
+                copy_presence_account(&ecred.userName, exclusion_account,
+                                     sizeof(exclusion_account));
                 credential_free(&ecred);
                 if (options.up == ptrue || options.present == false || options.up == NULL) {
 #ifdef CARDPUTER_ADV
-                    cardputer_presence_set_kind(3);
+                    cardputer_presence_set_kind(CF_PRESENCE_KIND_EXCLUSION);
 #endif
+                    char* saved_user_name = user_name;
+                    if (exclusion_account[0] != '\0') {
+                        user_name = exclusion_account;
+                    }
                     bool presence_failed = false;
                     if (pinUvAuthParam.present == true) {
                         if (getUserPresentFlagValue() == false) {
@@ -534,6 +563,7 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
                     else if (!(flags & FIDO2_AUT_FLAG_UP)) {
                         presence_failed = !check_user_presence();
                     }
+                    user_name = saved_user_name;
 #ifdef CARDPUTER_ADV
                     cardputer_presence_set_kind(-1);
 #endif
@@ -910,6 +940,8 @@ err:
     current_fido_operation = OP_NONE;
     rp_id = NULL;
     rp_id_len = 0;
+    user_name = NULL;
+    display_name = NULL;
     CBOR_FREE_BYTE_STRING(clientDataHash);
     CBOR_FREE_BYTE_STRING(pinUvAuthParam);
     CBOR_FREE_BYTE_STRING(rp.id);
