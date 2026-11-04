@@ -105,6 +105,17 @@ WEAK int picokey_init(void) {
     return 0;
 }
 
+WEAK int picokey_board_init(void) {
+    return 0;
+}
+
+WEAK void picokey_ui_task(void) {
+}
+
+WEAK void picokey_storage_failure(int status) {
+    (void)status;
+}
+
 void execute_tasks(void);
 void execute_tasks(void) {
 #if !defined(ENABLE_EMULATION) && !defined(ESP_PLATFORM)
@@ -118,6 +129,7 @@ void execute_tasks(void) {
 #endif
     usb_task();
     led_blinking_task();
+    picokey_ui_task();
 #ifdef ENABLE_LVGL_UI
     platform_ui_task();
 #endif
@@ -157,6 +169,7 @@ int main(void) {
 #endif
 
     serial_init();
+    picokey_board_init();
 
 #ifndef ENABLE_EMULATION
 #ifdef PICO_PLATFORM
@@ -171,6 +184,12 @@ int main(void) {
     random_init();
 
     otp_init();
+
+#ifdef CARDPUTER_ADV
+    if (otp_key_1 == NULL || otp_key_2 == NULL) {
+        picokey_storage_failure(-1);
+    }
+#endif
 
     low_flash_init();
 

@@ -13,6 +13,10 @@
 #define CF_FIDO_FS_SIZE 0x100000u
 #define CF_MAX_PARTITIONS 32u
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     CF_LAYOUT_OK = 0,
     CF_LAYOUT_MISSING = 1,
@@ -54,5 +58,9 @@ cf_layout_status cf_flash_layout_validate(const cf_partition_desc *partitions,
  */
 int cf_flash_layout_physical(const cf_flash_layout *layout, uint32_t logical,
                              size_t len, uint32_t *physical);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

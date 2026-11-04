@@ -11,6 +11,10 @@
 #define CF_KEY_VERSION 1u
 #define CF_KEY_COMMIT_MARKER 0x43464B31u
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     CF_KEY_EMPTY = 0,
     CF_KEY_READY = 1,
@@ -66,5 +70,9 @@ cf_key_status cf_key_store_load(const cf_key_flash *flash, cf_device_keys *out);
  */
 cf_key_status cf_key_store_provision(const cf_key_flash *flash,
                                      cf_device_keys *out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

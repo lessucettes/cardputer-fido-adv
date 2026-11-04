@@ -325,9 +325,20 @@ if(ENABLE_PQC)
 endif()
 
 if(ESP_PLATFORM)
-    list(APPEND PICOKEYS_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_esp32.c
-    )
+    if(CARDPUTER_ADV)
+        list(APPEND PICOKEYS_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/../src/cardputer/key_store.c
+            ${CMAKE_CURRENT_LIST_DIR}/../src/cardputer/flash_layout.c
+            ${CMAKE_CURRENT_LIST_DIR}/../src/cardputer/key_store_esp32.c
+        )
+        list(APPEND INCLUDES
+            ${CMAKE_CURRENT_LIST_DIR}/../src/cardputer
+        )
+    else()
+        list(APPEND PICOKEYS_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_esp32.c
+        )
+    endif()
 elseif(ENABLE_EMULATION)
     if(MSVC)
         list(APPEND PICOKEYS_SOURCES
@@ -653,9 +664,11 @@ if(PICO_PLATFORM)
 endif()
 
 if(ESP_PLATFORM)
-    list(APPEND PICOKEYS_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_esp32.c
-    )
+    if(NOT CARDPUTER_ADV)
+        list(APPEND PICOKEYS_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_esp32.c
+        )
+    endif()
 elseif(ENABLE_EMULATION)
     if(MSVC)
         list(APPEND PICOKEYS_SOURCES

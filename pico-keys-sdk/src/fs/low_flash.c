@@ -30,12 +30,21 @@
  #include "boot/picobin.h"
 #else
  #ifdef ESP_PLATFORM
-  #include "compat/esp_compat.h"
+ #include "compat/esp_compat.h"
   #include "esp_partition.h"
+  #include "flash_layout.h"
+  #ifdef CARDPUTER_ADV
+   #include "key_store_esp32.h"
+  #endif
   const esp_partition_t *part0;
   #define save_and_disable_interrupts() 1
-  #define flash_range_erase(a,b) esp_partition_erase_range(part0, a, b)
-  #define flash_range_program(a,b,c) esp_partition_write(part0, a, b, c);
+  #ifdef CARDPUTER_ADV
+   #define flash_range_erase(a,b) esp_partition_erase_range(part0, CF_FIDO_FS_OFFSET + (a), b)
+   #define flash_range_program(a,b,c) esp_partition_write(part0, CF_FIDO_FS_OFFSET + (a), b, c);
+  #else
+   #define flash_range_erase(a,b) esp_partition_erase_range(part0, a, b)
+   #define flash_range_program(a,b,c) esp_partition_write(part0, a, b, c);
+  #endif
   #define restore_interrupts(a) (void)a
  #else
   #ifdef _MSC_VER
@@ -353,7 +362,13 @@ void low_flash_task(void) {
 #ifdef ESP_PLATFORM
         if (flash_updated && multicore_lockout_start_timeout_us(1000)) {
             esp_partition_munmap(fd_map);
+#ifdef CARDPUTER_ADV
+            esp_partition_mmap(part0, CF_FIDO_FS_OFFSET, CF_FIDO_FS_SIZE,
+                               ESP_PARTITION_MMAP_DATA, (const void **)&map,
+                               (esp_partition_mmap_handle_t *)&fd_map);
+#else
             esp_partition_mmap(part0, 0, part0->size, ESP_PARTITION_MMAP_DATA, (const void **)&map, (esp_partition_mmap_handle_t *)&fd_map);
+#endif
             multicore_lockout_end_timeout_us(1000);
         }
 #endif
@@ -555,11 +570,38 @@ void low_flash_init(void) {
     uint32_t data_start_addr;
     uint32_t data_end_addr;
 #if defined(ESP_PLATFORM)
+#ifdef CARDPUTER_ADV
+    part0 = cardputer_fido_partition();
+    if (part0 == NULL) {
+        printf("ERROR: FIDO partition is unavailable\n");
+        map = NULL;
+        data_start_addr = 0;
+        data_end_addr = 0;
+        FLASH_SIZE_BYTES = 0;
+        return;
+    }
+    esp_err_t map_ret = esp_partition_mmap(part0, CF_FIDO_FS_OFFSET, CF_FIDO_FS_SIZE,
+                                           ESP_PARTITION_MMAP_DATA,
+                                           (const void **)&map,
+                                           (esp_partition_mmap_handle_t *)&fd_map);
+    if (map_ret != ESP_OK) {
+        printf("ERROR: FIDO filesystem mmap failed [%d]\n", map_ret);
+        map = NULL;
+        data_start_addr = 0;
+        data_end_addr = 0;
+        FLASH_SIZE_BYTES = 0;
+        return;
+    }
+    data_start_addr = 0;
+    data_end_addr = CF_FIDO_FS_SIZE;
+    FLASH_SIZE_BYTES = CF_FIDO_FS_SIZE;
+#else
     part0 = esp_partition_find_first(0x40, 0x1, "part0");
     esp_partition_mmap(part0, 0, part0->size, ESP_PARTITION_MMAP_DATA, (const void **)&map, (esp_partition_mmap_handle_t *)&fd_map);
     data_start_addr = 0;
     data_end_addr = part0->size;
     FLASH_SIZE_BYTES = part0->size;
+#endif
 #elif defined(PICO_PLATFORM)
     uint8_t txbuf[6] = {0x9f};
     uint8_t rxbuf[6] = {0};

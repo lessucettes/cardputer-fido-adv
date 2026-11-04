@@ -24,4 +24,8 @@ using SettingsBytes = std::array<std::uint8_t, 4>;
 SettingsBytes encode_settings(const Settings& settings);
 bool decode_settings(const SettingsBytes& bytes, Settings& out);
 
+/* Platform adapters. The native build returns false and keeps defaults. */
+bool load_settings(Settings* out);
+bool save_settings(const Settings& settings);
+
 }  // namespace cardputer
