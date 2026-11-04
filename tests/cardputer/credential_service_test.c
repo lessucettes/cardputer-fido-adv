@@ -11,6 +11,7 @@ typedef struct {
     int truncated;
     int remove_calls;
     int fail_remove;
+    int forbidden;
     int missing;
 } fake_backend;
 
@@ -43,6 +44,9 @@ static int fake_list(void* ctx, cf_credential_item* items, size_t capacity,
 static int fake_remove(void* ctx, const uint8_t* id, size_t id_len) {
     fake_backend* backend = ctx;
     backend->remove_calls++;
+    if (backend->forbidden) {
+        return -2;
+    }
     if (backend->fail_remove) {
         return -1;
     }
@@ -139,6 +143,13 @@ int main(void) {
     require(cf_credential_service_poll(&service) == CF_CRED_RESULT_ERROR,
             "storage failure is reported");
     backend.fail_remove = 0;
+
+    backend.forbidden = 1;
+    require(cf_credential_request_delete(&service, &id_one, 1) == CF_CRED_OK,
+            "queue protected delete");
+    require(cf_credential_service_poll(&service) == CF_CRED_RESULT_FORBIDDEN,
+            "protected credential deletion is refused");
+    backend.forbidden = 0;
 
     require(cf_credential_request_delete(&service, NULL, 0) == CF_CRED_INVALID,
             "empty identity rejected");

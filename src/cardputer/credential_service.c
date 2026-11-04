@@ -81,6 +81,9 @@ static cf_cred_result run_delete(cf_credential_service *service) {
     if (rc == 1) {
         return CF_CRED_RESULT_NOT_FOUND;
     }
+    if (rc == -2) {
+        return CF_CRED_RESULT_FORBIDDEN;
+    }
     return CF_CRED_RESULT_ERROR;
 }
 

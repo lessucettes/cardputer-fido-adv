@@ -64,13 +64,11 @@ static int upstream_list(void *ctx, cf_credential_item *items, size_t capacity,
             credential_free(&cred);
             continue;
         }
-        /* A UV-required credential cannot be disclosed or deleted without
-         * host authorization. Keep it out of the local list rather than
-         * weakening its policy or inventing a fake identity. */
-        if (cred.extensions.credProtect == CRED_PROT_UV_REQUIRED) {
-            credential_free(&cred);
-            continue;
-        }
+        /* UV-required credentials remain visible as an opaque protected row.
+         * Do not disclose their RP/account metadata here and never delete
+         * them without host authorization. */
+        const bool protected_key =
+            cred.extensions.credProtect == CRED_PROT_UV_REQUIRED;
         uint8_t identity[32];
         if (credential_identity(&cred, identity) != 0) {
             credential_free(&cred);
@@ -81,20 +79,22 @@ static int upstream_list(void *ctx, cf_credential_item *items, size_t capacity,
             memset(item, 0, sizeof(*item));
             memcpy(item->id, identity, sizeof(item->id));
             item->id_len = sizeof(item->id);
-            item->protected_key = 0;
-            if (cred.rpId.present && cred.rpId.data != NULL) {
-                copy_display_text(item->rp_id, sizeof(item->rp_id),
-                                  (const uint8_t *)cred.rpId.data, cred.rpId.len);
-            }
-            if (cred.userName.present && cred.userName.data != NULL) {
-                copy_display_text(item->account, sizeof(item->account),
-                                  (const uint8_t *)cred.userName.data,
-                                  cred.userName.len);
-            } else if (cred.userDisplayName.present &&
-                       cred.userDisplayName.data != NULL) {
-                copy_display_text(item->account, sizeof(item->account),
-                                  (const uint8_t *)cred.userDisplayName.data,
-                                  cred.userDisplayName.len);
+            item->protected_key = protected_key ? 1 : 0;
+            if (!protected_key) {
+                if (cred.rpId.present && cred.rpId.data != NULL) {
+                    copy_display_text(item->rp_id, sizeof(item->rp_id),
+                                      (const uint8_t *)cred.rpId.data, cred.rpId.len);
+                }
+                if (cred.userName.present && cred.userName.data != NULL) {
+                    copy_display_text(item->account, sizeof(item->account),
+                                      (const uint8_t *)cred.userName.data,
+                                      cred.userName.len);
+                } else if (cred.userDisplayName.present &&
+                           cred.userDisplayName.data != NULL) {
+                    copy_display_text(item->account, sizeof(item->account),
+                                      (const uint8_t *)cred.userDisplayName.data,
+                                      cred.userDisplayName.len);
+                }
             }
             ++count;
         } else {
@@ -129,6 +129,10 @@ static int upstream_remove(void *ctx, const uint8_t *id, size_t id_len) {
         if (credential_load_resident(ef, rp_hash, &cred) != 0) {
             credential_free(&cred);
             continue;
+        }
+        if (cred.extensions.credProtect == CRED_PROT_UV_REQUIRED) {
+            credential_free(&cred);
+            return -2;
         }
         uint8_t identity[32];
         const int identified = credential_identity(&cred, identity);

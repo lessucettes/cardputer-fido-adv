@@ -48,7 +48,8 @@ typedef enum {
     CF_CRED_RESULT_LIST = 1,
     CF_CRED_RESULT_DELETED = 2,
     CF_CRED_RESULT_NOT_FOUND = 3,
-    CF_CRED_RESULT_ERROR = 4
+    CF_CRED_RESULT_FORBIDDEN = 4,
+    CF_CRED_RESULT_ERROR = 5
 } cf_cred_result;
 
 typedef enum {

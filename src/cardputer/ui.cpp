@@ -121,6 +121,9 @@ void pump_credentials() {
     } else if (result == CF_CRED_RESULT_NOT_FOUND) {
         model.set_status("Key not found");
         board.play(Tone::Failure);
+    } else if (result == CF_CRED_RESULT_FORBIDDEN) {
+        model.set_status("Protected key");
+        board.play(Tone::Failure);
     } else if (result == CF_CRED_RESULT_ERROR) {
         model.set_status("Could not access saved keys");
         board.play(Tone::Failure);
