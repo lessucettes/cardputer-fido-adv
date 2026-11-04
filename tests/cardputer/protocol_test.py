@@ -16,9 +16,12 @@ import tempfile
 import time
 
 try:
+    from fido2.ctap import CtapError
     from fido2.ctap2 import Ctap2
+    from fido2.ctap2.credman import CredentialManagement
+    from fido2.ctap2.pin import ClientPin, PinProtocolV1
 except ModuleNotFoundError:  # optional protocol-test dependency
-    Ctap2 = None
+    CtapError = Ctap2 = CredentialManagement = ClientPin = PinProtocolV1 = None
 
 RP = {"id": "example.com", "name": "Example RP"}
 KEY_PARAMS = [{"type": "public-key", "alg": -7}]
@@ -270,6 +273,103 @@ def run_protocol_suite(emulator_path: pathlib.Path,
                 assert info_payload, "GetInfo after reconnect"
                 hid.close()
             print("PASS: 20 CTAPHID reconnect/INIT cycles")
+    finally:
+        emulator.stop()
+        if not keep_workdir:
+            shutil.rmtree(emulator.workdir, ignore_errors=True)
+
+
+def run_pin_suite(emulator_path: pathlib.Path,
+                  keep_workdir: bool = False) -> None:
+    emulator = Emulator(emulator_path)
+    try:
+        emulator.start()
+        hid, ctap = connect()
+
+        carol = ctap.make_credential(
+            hashlib.sha256(b"pin-register-carol").digest(), RP,
+            create_user("carol"), KEY_PARAMS, options={"rk": True},
+        )
+        dave = ctap.make_credential(
+            hashlib.sha256(b"pin-register-dave").digest(), RP,
+            create_user("dave"), KEY_PARAMS, options={"rk": True},
+        )
+        carol_id = bytes(carol.auth_data.credential_data.credential_id)
+        dave_id = bytes(dave.auth_data.credential_data.credential_id)
+
+        pin = ClientPin(ctap, PinProtocolV1())
+        pin.set_pin("123456")
+        try:
+            pin.get_pin_token("000000", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT)
+        except CtapError as exc:
+            assert exc.code == CtapError.ERR.PIN_INVALID, exc
+        else:
+            raise AssertionError("wrong PIN was accepted")
+        retries = pin.get_pin_retries()
+        assert retries[0] == 7, retries
+        print("PASS: PIN is set and a wrong PIN consumes one retry")
+
+        token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
+        )
+        cm = CredentialManagement(ctap, PinProtocolV1(), token)
+        assert cm.get_metadata()[1] == 2
+        rps = cm.enumerate_rps()
+        assert any(item[3]["id"] == RP["id"] for item in rps), rps
+        creds = cm.enumerate_creds(hashlib.sha256(RP["id"].encode()).digest())
+        assert len(creds) == 2, len(creds)
+        print("PASS: credential management enumerates RPs and credentials")
+
+        cm.delete_cred({"type": "public-key", "id": carol_id})
+        assert cm.get_metadata()[1] == 1
+        remaining = cm.enumerate_creds(hashlib.sha256(RP["id"].encode()).digest())
+        assert len(remaining) == 1, len(remaining)
+        try:
+            ctap.get_assertion(
+                RP["id"], hashlib.sha256(b"deleted-login").digest(),
+                allow_list=[{"type": "public-key", "id": carol_id}],
+            )
+        except CtapError as exc:
+            assert exc.code == CtapError.ERR.NO_CREDENTIALS, exc
+        else:
+            raise AssertionError("deleted credential still asserted")
+        print("PASS: resident credential deletion removes only the target")
+
+        cdh = hashlib.sha256(b"remaining-login").digest()
+        ga_token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.GET_ASSERTION
+        )
+        assertion = ctap.get_assertion(
+            RP["id"], cdh,
+            allow_list=[{"type": "public-key", "id": dave_id}],
+            pin_uv_param=PinProtocolV1().authenticate(ga_token, cdh),
+            pin_uv_protocol=1,
+        )
+        assertion.verify(cdh, dave.auth_data.credential_data.public_key)
+        print("PASS: remaining credential signs after PIN authentication")
+
+        pin.change_pin("123456", "654321")
+        try:
+            pin.get_pin_token("123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT)
+        except CtapError as exc:
+            assert exc.code == CtapError.ERR.PIN_INVALID, exc
+        else:
+            raise AssertionError("old PIN survived change_pin")
+        print("PASS: PIN change invalidates the old PIN")
+        hid.close()
+
+        emulator.stop()
+        emulator.start()
+        hid, ctap = connect()
+        pin = ClientPin(ctap, PinProtocolV1())
+        token = pin.get_pin_token(
+            "654321", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
+        )
+        cm = CredentialManagement(ctap, PinProtocolV1(), token)
+        assert cm.get_metadata()[1] == 1
+        assert len(cm.enumerate_creds(hashlib.sha256(RP["id"].encode()).digest())) == 1
+        hid.close()
+        print("PASS: changed PIN and deleted credential survive restart")
     finally:
         emulator.stop()
         if not keep_workdir:

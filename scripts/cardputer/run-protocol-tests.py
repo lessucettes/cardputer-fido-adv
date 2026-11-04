@@ -24,7 +24,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests" / "cardputer"))
 
 try:
-    from protocol_test import run_protocol_suite
+    from protocol_test import run_pin_suite, run_protocol_suite
     from reconnect_test import run_reconnect_suite
 except ModuleNotFoundError as exc:  # pragma: no cover - operator guidance
     if exc.name == "fido2":
@@ -70,6 +70,7 @@ def main() -> int:
         reconnect_cases=False,
         keep_workdir=args.keep_workdir,
     )
+    run_pin_suite(args.emulator, keep_workdir=args.keep_workdir)
     if args.reconnect_cases:
         run_reconnect_suite(args.emulator)
     print("PASS: isolated CTAP2 protocol suite")
