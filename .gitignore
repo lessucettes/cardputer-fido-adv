@@ -3,3 +3,10 @@ build*/
 legacy/
 .DS_Store
 
+# Fetched by pico-keys-sdk/cmake/deps.cmake at configure time.
+pico-keys-sdk/third-party/
+
+# Local test and packaging output.
+dist/
+*.pyc
+
