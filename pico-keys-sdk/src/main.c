@@ -46,6 +46,10 @@
 
 extern int rescue_migrate_keydev(void);
 
+int picokey_board_init(void);
+void picokey_ui_task(void);
+void picokey_storage_failure(int status);
+
 app_t apps[16];
 uint8_t num_apps = 0;
 

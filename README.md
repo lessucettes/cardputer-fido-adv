@@ -41,6 +41,19 @@ cmake --build build/cardputer-host
 ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
+Isolated CTAP2 protocol tests (host emulator, no board or TPM):
+
+```sh
+cmake -S . -B build/emulator -G Ninja \
+  -DENABLE_EMULATION=ON -DENABLE_DETERMINISTIC_OTP=ON
+cmake --build build/emulator --target pico_fido
+
+python3 -m venv .venv-protocol
+.venv-protocol/bin/pip install -r tests/cardputer/requirements-protocol.txt
+.venv-protocol/bin/python scripts/cardputer/run-protocol-tests.py \
+  --emulator build/emulator/pico_fido --reconnect-cases
+```
+
 Firmware (ESP-IDF v5.5.3, ESP32-S3):
 
 ```sh

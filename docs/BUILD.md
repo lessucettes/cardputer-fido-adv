@@ -14,13 +14,13 @@ cmake --build build/upstream-host --target \
 ctest --test-dir build/upstream-host --output-on-failure
 ```
 
-Observed: all five upstream container/provider tests passed. Building the
-complete `pico_fido` emulator target is currently blocked on the host because
-the pinned SDK selects its Linux OTP backend and requires TPM 2.0 development
-headers (`tss2/tss2_esys.h` from `libtss2-dev`). This is an environment
-dependency of upstream, not a port defect. Do not run
-`tests/start-up-and-test.sh`: it modifies system Python paths and starts
-services.
+Observed: all five upstream container/provider tests passed. The default
+emulator build still selects the Linux OTP backend and needs TPM 2.0
+development headers (`tss2/tss2_esys.h` from `libtss2-dev`). For a host-only
+session the fork adds `ENABLE_DETERMINISTIC_OTP`, backed by
+`pico-keys-sdk/src/otp/otp_file.c` and `PICO_KEYS_OTP_FILE`, so no TPM is
+required. Do not run `tests/start-up-and-test.sh`: it modifies system Python
+paths and starts services.
 
 ## Native Cardputer tests
 
@@ -40,6 +40,31 @@ Observed on the current candidate: seven native tests pass
 (`cardputer_model`, `cardputer_settings`, `cardputer_text`,
 `cardputer_key_store`, `cardputer_flash_layout`, `cardputer_presence_bridge`,
 `cardputer_credential_service`).
+
+## Isolated CTAP2 protocol tests
+
+The host emulator is driven over its TCP HID socket. This exercises CTAPHID
+framing, CBOR, registration, assertions and resident-credential storage through
+the pinned upstream stack. It is not an electrical USB or Cardputer-keyboard
+test.
+
+```sh
+cmake -S . -B build/emulator -G Ninja \
+  -DENABLE_EMULATION=ON -DENABLE_DETERMINISTIC_OTP=ON
+cmake --build build/emulator --target pico_fido
+
+python3 -m venv .venv-protocol
+.venv-protocol/bin/pip install -r tests/cardputer/requirements-protocol.txt
+.venv-protocol/bin/python scripts/cardputer/run-protocol-tests.py \
+  --emulator build/emulator/pico_fido --reconnect-cases
+```
+
+The suite starts and stops its own emulator in a temporary directory, verifies
+assertion signatures with the independent `fido2` client, checks two accounts
+under one RP, RP mismatch, persistence across an emulator restart, and the
+synthetic reconnect/fragment-timeout cases. Observed on the current candidate:
+all cases pass. Hardware USB reconnect, browser interaction and the physical
+presence prompt remain separate manual gates.
 
 ## Firmware build
 

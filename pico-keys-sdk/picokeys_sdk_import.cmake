@@ -160,6 +160,8 @@ message(STATUS "USB VID/PID:\t\t\t ${USB_VID}:${USB_PID}")
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/deps.cmake)
 
 option(ENABLE_PQC "Enable/disable PQC support" OFF)
+option(ENABLE_DETERMINISTIC_OTP
+    "Use a host-emulation OTP file instead of a system TPM" OFF)
 configure_bool_option(
     ENABLE_PQC
     ""
@@ -340,7 +342,11 @@ if(ESP_PLATFORM)
         )
     endif()
 elseif(ENABLE_EMULATION)
-    if(MSVC)
+    if(ENABLE_DETERMINISTIC_OTP)
+        list(APPEND PICOKEYS_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_file.c
+        )
+    elseif(MSVC)
         list(APPEND PICOKEYS_SOURCES
             ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_windows.c
         )
@@ -670,7 +676,11 @@ if(ESP_PLATFORM)
         )
     endif()
 elseif(ENABLE_EMULATION)
-    if(MSVC)
+    if(ENABLE_DETERMINISTIC_OTP)
+        list(APPEND PICOKEYS_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_file.c
+        )
+    elseif(MSVC)
         list(APPEND PICOKEYS_SOURCES
             ${CMAKE_CURRENT_LIST_DIR}/src/otp/otp_windows.c
         )

@@ -28,6 +28,25 @@ jobs:
       - name: Run policy and packaging tests
         run: python3 -m unittest discover -s tests/cardputer -p '*_test.py'
 
+  protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - name: Build deterministic host emulator
+        run: |
+          cmake -S . -B build/emulator -G Ninja \
+            -DENABLE_EMULATION=ON -DENABLE_DETERMINISTIC_OTP=ON
+          cmake --build build/emulator --target pico_fido
+      - name: Install protocol test client
+        run: |
+          python3 -m venv .venv-protocol
+          .venv-protocol/bin/pip install -r tests/cardputer/requirements-protocol.txt
+      - name: Run isolated CTAP2 suite
+        run: |
+          .venv-protocol/bin/python scripts/cardputer/run-protocol-tests.py \
+            --emulator build/emulator/pico_fido --reconnect-cases
+
   firmware:
     runs-on: ubuntu-latest
     timeout-minutes: 45
