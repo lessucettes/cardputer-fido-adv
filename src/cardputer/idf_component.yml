@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.5"
+  m5stack/m5unified: "0.2.13"
+  espressif/esp_tinyusb: "^1.7.6"

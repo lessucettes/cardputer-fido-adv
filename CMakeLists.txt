@@ -17,6 +17,8 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+option(CARDPUTER_ADV "Build the Cardputer ADV port" OFF)
+
 set(USB_VID 0x2E8A)
 set(USB_PID 0x10FE)
 
@@ -88,6 +90,15 @@ endif()
 
 set(USB_ITF_HID 1)
 include(pico-keys-sdk/picokeys_sdk_import.cmake)
+if(CARDPUTER_ADV)
+    include(cmake/cardputer.cmake)
+    list(APPEND SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/src/fido/cardputer_credentials.c
+    )
+    list(APPEND INCLUDES
+        ${CMAKE_CURRENT_LIST_DIR}/src/cardputer
+    )
+endif()
 SET_BUILD_NUMBER("${CMAKE_CURRENT_LIST_DIR}")
 
 if(NOT ESP_PLATFORM)
@@ -139,6 +150,22 @@ endif()
 SET_VERSION(ver_major ver_minor "${CMAKE_CURRENT_LIST_DIR}/src/fido/version.h")
 if(ESP_PLATFORM)
     project(pico_fido)
+    if(CARDPUTER_ADV)
+        # Managed M5Unified sources carry a warning in optional PowerHub RTC
+        # code. Keep it visible for this third-party component, but do not let
+        # it fail the ADV build.
+        idf_build_get_property(_cardputer_components BUILD_COMPONENTS)
+        foreach(_cardputer_component ${_cardputer_components})
+            if(_cardputer_component MATCHES "m5unified|m5gfx")
+                idf_component_get_property(_cardputer_lib ${_cardputer_component}
+                                           COMPONENT_LIB)
+                if(TARGET ${_cardputer_lib})
+                    target_compile_options(${_cardputer_lib} PRIVATE
+                        -Wno-error=maybe-uninitialized)
+                endif()
+            endif()
+        endforeach()
+    endif()
 endif()
 
 set(INCLUDES ${INCLUDES}

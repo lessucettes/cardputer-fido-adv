@@ -1,0 +1,32 @@
+idf_component_register(
+    SRCS
+        board.cpp
+        input.cpp
+        display.cpp
+        audio.cpp
+        power.cpp
+        model.cpp
+        settings.cpp
+        text.cpp
+        presence_bridge.cpp
+        ui.cpp
+        credential_service.c
+        keyboard/Keyboard.cpp
+        keyboard/KeyboardReader/IOMatrix.cpp
+        keyboard/KeyboardReader/TCA8418.cpp
+        Adafruit_TCA8418/Adafruit_TCA8418.cpp
+    INCLUDE_DIRS
+        .
+        keyboard
+        Adafruit_TCA8418
+    REQUIRES
+        pico-keys-sdk
+        m5unified
+        m5gfx
+        esp_tinyusb
+        driver
+        esp_timer
+        nvs_flash
+        esp_partition
+        esp_hw_support
+)

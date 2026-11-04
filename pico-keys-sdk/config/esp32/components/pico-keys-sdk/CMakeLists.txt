@@ -8,6 +8,7 @@ set(PICOKEYS_INCLUDE_DIRS
     ${PICOKEYS_SDK_DIR}/src/usb
     ${PICOKEYS_SDK_DIR}/src/led
     ${PICOKEYS_SDK_DIR}/third-party/mbedtls/include
+    ${PICOKEYS_SDK_DIR}/../src/cardputer
 )
 
 set(PICOKEYS_REQUIRES
@@ -18,6 +19,7 @@ set(PICOKEYS_REQUIRES
     esp_tinyusb
     efuse
     mbedtls
+    esp_hw_support
 )
 if(USB_ITF_HID)
     list(APPEND PICOKEYS_REQUIRES
