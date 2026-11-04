@@ -36,6 +36,10 @@ ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
 Expected GREEN: exit 0, all selected tests pass, no sanitizer diagnostics.
+Observed on the current candidate: seven native tests pass
+(`cardputer_model`, `cardputer_settings`, `cardputer_text`,
+`cardputer_key_store`, `cardputer_flash_layout`, `cardputer_presence_bridge`,
+`cardputer_credential_service`).
 
 ## Firmware build
 
@@ -45,8 +49,39 @@ The ADV firmware build requires ESP-IDF v5.5.3 and the ESP32-S3 toolchain:
 . "$HOME/esp/esp-idf-v5.5.3/export.sh"
 bash scripts/cardputer/build.sh
 python3 scripts/cardputer/check-build.py build/cardputer-adv
+python3 scripts/cardputer/package.py --build build/cardputer-adv \
+  --out dist/cardputer-adv
 ```
+
+Observed on the current candidate:
+
+- ESP-IDF v5.5.3, target ESP32-S3.
+- M5Unified 0.2.13 and M5GFX 0.2.36 from the component registry, pinned in
+  `dependencies.lock`.
+- `build/cardputer-adv/pico_fido.bin` produced, size `0xcb9c0`.
+- Build-policy verifier prints `PASS: Cardputer ADV build policy`.
+- App-only package is written to `dist/cardputer-adv/`.
 
 The build script refuses to flash, erase or monitor. A reference partition CSV
 under `config/cardputer_adv/` is a build fixture only; it is not the partition
 table of any particular board.
+
+If `export.sh` runs inside an outer Python virtual environment, ESP-IDF may
+refuse to create its own environment. Run it with a system Python for the
+tooling bootstrap, for example:
+
+```sh
+env -u VIRTUAL_ENV -u PYTHONPATH -u PYTHONHOME PATH=/usr/bin:/bin:/usr/local/bin \
+  bash -c '. "$HOME/esp/esp-idf-v5.5.3/export.sh" && bash scripts/cardputer/build.sh'
+```
+
+## Release checks
+
+```sh
+bash scripts/cardputer/release-check.sh
+```
+
+This runs native tests, Python policy/package tests, the firmware build, the
+policy verifier and packaging. It requires `IDF_PATH`; a missing toolchain is
+a failed gate, not a successful skip. Hardware validation remains a separate
+manual gate.
