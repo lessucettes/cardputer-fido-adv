@@ -20,6 +20,9 @@
 #include "fido.h"
 #include "ctap2_cbor.h"
 #include "ctap.h"
+#ifdef CARDPUTER_ADV
+#include "ui.h"
+#endif
 #if defined(PICO_PLATFORM)
 #include "bsp/board.h"
 #endif
@@ -117,6 +120,9 @@ int cbor_reset(void) {
     if (!(phy_data.opts & PHY_OPT_DISABLE_POWER_RESET) && board_millis() > 10000) {
         return CTAP2_ERR_NOT_ALLOWED;
     }
+#endif
+#ifdef CARDPUTER_ADV
+    cardputer_presence_set_kind(4);
 #endif
     int ret = wait_button_pressed();
     if (ret == 1) {

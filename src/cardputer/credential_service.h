@@ -9,6 +9,10 @@
 #define CF_CRED_ACCOUNT_MAX 65u
 #define CF_CRED_MAX_ITEMS 32u
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     uint8_t id[CF_CRED_ID_MAX];
     uint8_t id_len;
@@ -87,5 +91,9 @@ cf_cred_result cf_credential_take_result(cf_credential_service *service);
 int cf_credential_request_pending(const cf_credential_service *service);
 const cf_credential_item *cf_credential_items(
     const cf_credential_service *service, size_t *count, int *truncated);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

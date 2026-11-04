@@ -45,6 +45,11 @@
 #include "crypto_utils.h"
 #include "otp.h"
 #include "event.h"
+#ifdef CARDPUTER_ADV
+#include "ui.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#endif
 
 extern char *rp_id;
 extern size_t rp_id_len;
@@ -541,6 +546,21 @@ int wait_button_pressed(void) {
 }
 
 int wait_button_pressed_timeout(uint32_t timeout_seconds) {
+#ifdef CARDPUTER_ADV
+    if (timeout_seconds == 0 && !force_button_wait) {
+        return 0;
+    }
+    const uint32_t generation =
+        cardputer_presence_begin(timeout_seconds * 1000u, current_fido_operation);
+    for (;;) {
+        const int result = cardputer_presence_take(generation);
+        if (result >= 0) {
+            return result;
+        }
+        cardputer_ui_pump();
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+#endif
     // This core runs button_task(), so waiting here would deadlock USB processing.
 #if defined(PICO_PLATFORM)
     if (get_core_num() == 0) {
