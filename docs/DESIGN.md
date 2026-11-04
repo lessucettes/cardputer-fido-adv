@@ -53,6 +53,10 @@ the filesystem API.
 
 `wait_button_pressed_timeout()` on ADV starts a request in `PresenceBridge` and
 pumps the UI until the bridge returns `confirmed`, `cancelled` or `timed_out`.
+The SDK's weak board/UI/storage hooks are overridden in `ui.cpp`, so
+`picokey_board_init()` initializes the controller before key generation,
+`picokey_ui_task()` keeps the menu serviced on the owner loop, and a storage
+failure halts before USB is installed.
 The bridge:
 
 - copies and bounds the RP ID and account name;
