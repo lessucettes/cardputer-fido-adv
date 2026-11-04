@@ -226,6 +226,18 @@ def run_protocol_suite(emulator_path: pathlib.Path,
         assertion.verify(cdh, mc.auth_data.credential_data.public_key)
         print("PASS: GetAssertion signature verifies")
 
+        try:
+            ctap.make_credential(
+                hashlib.sha256(b"register-alice-again").digest(), RP, alice,
+                KEY_PARAMS,
+                exclude_list=[{"type": "public-key", "id": cred_id}],
+            )
+        except CtapError as exc:
+            assert exc.code == CtapError.ERR.CREDENTIAL_EXCLUDED, exc
+        else:
+            raise AssertionError("exclusion list was ignored")
+        print("PASS: existing-credential exclusion rejects a duplicate")
+
         bob = create_user("bob")
         ctap.make_credential(
             hashlib.sha256(b"register-bob").digest(), RP, bob, KEY_PARAMS,
@@ -236,6 +248,24 @@ def run_protocol_suite(emulator_path: pathlib.Path,
         ids = {item.user["id"] for item in assertions if item.user}
         assert ids == {b"alice", b"bob"}, ids
         print("PASS: two accounts under one RP are both discoverable")
+
+        eve = create_user("eve")
+        eve_mc = ctap.make_credential(
+            hashlib.sha256(b"register-eve-nonresident").digest(), RP, eve,
+            KEY_PARAMS, options={"rk": False},
+        )
+        eve_id = bytes(eve_mc.auth_data.credential_data.credential_id)
+        discovered = ctap.get_assertions(
+            RP["id"], hashlib.sha256(b"login-eve-discovery").digest()
+        )
+        assert all(item.user["id"] != b"eve" for item in discovered if item.user), \
+            "nonresident credential was discoverable"
+        eve_cdh = hashlib.sha256(b"login-eve").digest()
+        eve_assertion = ctap.get_assertion(
+            RP["id"], eve_cdh, allow_list=[{"type": "public-key", "id": eve_id}]
+        )
+        eve_assertion.verify(eve_cdh, eve_mc.auth_data.credential_data.public_key)
+        print("PASS: nonresident credential signs only when explicitly listed")
 
         wrong_rejected = False
         try:

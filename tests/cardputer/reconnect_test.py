@@ -62,6 +62,24 @@ def run_reconnect_suite(emulator_path: pathlib.Path, cycles: int = 100) -> None:
         expect_error(hid, BROADCAST, PING, b"bad", ERR_INVALID_CHANNEL)
         print("PASS: invalid channel IDs are rejected")
 
+        hid.send_initial(hid.cid, CBOR, 8000, b"\x04")
+        _, rcmd, rpayload = hid.read_message()
+        assert (rcmd & 0x7F) == CtapHidTcp.ERROR, f"expected length error, got {rcmd:#x}"
+        assert rpayload[0] == 0x03, f"expected INVALID_LEN, got {rpayload[0]:#x}"
+        assert get_info(hid), "channel unusable after length error"
+        print("PASS: oversized HID reports are rejected")
+
+        _, _, malformed = hid.call(CBOR, b"\x04\xff")
+        assert malformed[:1] == b"\x00" and len(malformed) > 1, malformed
+        assert get_info(hid), "channel unusable after malformed CBOR"
+        print("PASS: malformed CBOR returns a protocol error and recovers")
+
+        hid.send_initial(hid.cid, CBOR, 100, b"\x04" + b"\xa0" * 56)
+        hid.send_initial(hid.cid, 0x11, 0, b"")
+        time.sleep(0.05)
+        assert get_info(hid), "channel unusable after cancel"
+        print("PASS: CTAPHID cancel clears a partial request")
+
         # Start a fragmented request, then let it time out without its tail.
         hid.send_initial(hid.cid, CBOR, 100, b"\x04" + b"\xa0" * 56)
         time.sleep(0.7)
