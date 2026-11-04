@@ -42,3 +42,28 @@ cardputer_add_cxx_test(cardputer_settings
     settings_test.cpp
     "${ROOT}/src/cardputer/settings.cpp"
 )
+
+cardputer_add_cxx_test(cardputer_text
+    text_test.cpp
+    "${ROOT}/src/cardputer/text.cpp"
+)
+
+cardputer_add_c_test(cardputer_key_store
+    key_store_test.c
+    fake_flash.c
+    "${ROOT}/src/cardputer/key_store.c"
+)
+
+cardputer_add_c_test(cardputer_flash_layout
+    flash_layout_test.c
+    fake_flash.c
+    "${ROOT}/src/cardputer/flash_layout.c"
+)
+
+cardputer_add_cxx_test(cardputer_presence_bridge
+    presence_bridge_test.cpp
+    "${ROOT}/src/cardputer/presence_bridge.cpp"
+    "${ROOT}/src/cardputer/model.cpp"
+    "${ROOT}/src/cardputer/settings.cpp"
+    "${ROOT}/src/cardputer/text.cpp"
+)

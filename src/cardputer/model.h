@@ -70,9 +70,11 @@ public:
                                 const RequestInfo& info);
     void cancel_request(std::uint64_t now);
     Decision take_decision();
+    bool decision_pending() const { return decision_ != Decision::None; }
     std::uint32_t decision_generation() const { return decision_generation_; }
     std::uint32_t active_generation() const { return active_generation_; }
     const RequestInfo* active_request() const { return pending_ ? &request_ : nullptr; }
+    RequestInfo request_info() const { return request_; }
 
     bool screen_on() const { return screen_on_; }
     bool pending() const { return pending_; }
