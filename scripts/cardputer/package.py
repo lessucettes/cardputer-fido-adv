@@ -103,7 +103,8 @@ def package(build_dir: pathlib.Path, out_dir: pathlib.Path,
 
     manifest = {
         "name": "Cardputer-FIDO-ADV",
-        "version": f"{upstream_version()}-cardputer-adv",
+        "version": "0.1.0-cardputer-adv",
+        "upstream_version": upstream_version(),
         "target": "esp32s3",
         "board": "M5Stack Cardputer ADV",
         "source": {

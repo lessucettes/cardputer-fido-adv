@@ -553,6 +553,12 @@ int wait_button_pressed_timeout(uint32_t timeout_seconds) {
     const uint32_t generation =
         cardputer_presence_begin(timeout_seconds * 1000u, current_fido_operation);
     for (;;) {
+#ifdef CARDPUTER_ADV
+        if (cancel_button) {
+            cardputer_presence_cancel(generation);
+            cancel_button = false;
+        }
+#endif
         const int result = cardputer_presence_take(generation);
         if (result >= 0) {
             return result;

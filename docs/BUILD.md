@@ -83,7 +83,7 @@ Observed on the current candidate:
 - ESP-IDF v5.5.3, target ESP32-S3.
 - M5Unified 0.2.13 and M5GFX 0.2.36 from the component registry, pinned in
   `dependencies.lock`.
-- `build/cardputer-adv/pico_fido.bin` produced, size `0xcb9c0`.
+- `build/cardputer-adv/pico_fido.bin` produced, size `0xd9150`.
 - Build-policy verifier prints `PASS: Cardputer ADV build policy`.
 - App-only package is written to `dist/cardputer-adv/`.
 

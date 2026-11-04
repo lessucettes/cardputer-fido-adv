@@ -281,6 +281,12 @@ extern "C" int cardputer_presence_take(std::uint32_t generation) {
     }
 }
 
+extern "C" void cardputer_presence_cancel(std::uint32_t generation) {
+    ui_lock();
+    bridge.cancel(generation, Board::now_ms());
+    ui_unlock();
+}
+
 extern "C" void cardputer_presence_set_kind(int kind) {
     ui_lock();
     presence_kind_override = kind;
