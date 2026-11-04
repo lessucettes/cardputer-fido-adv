@@ -56,6 +56,16 @@ raw flash dumps or master secrets in a repository report.
 
 ## Gate 3 - browser registration/login/PIN/deletion
 
+Start the localhost-only fixture:
+
+```sh
+python3 tests/cardputer/browser/server.py --bind 127.0.0.1 --port 8765
+```
+
+The page talks only to loopback and checks challenge, origin and RP ID hash.
+It deliberately does not claim full signature verification; use an independent
+host FIDO library for that.
+
 - [ ] Localhost WebAuthn fixture registers a credential.
 - [ ] Independent host verifier checks the signature.
 - [ ] Resident and non-resident accounts work.

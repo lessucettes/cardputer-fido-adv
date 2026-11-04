@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cardputer FIDO local WebAuthn fixture</title>
+  <style>
+    body { font: 15px system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+    button { margin: .25rem .5rem .25rem 0; padding: .5rem .9rem; }
+    pre { background: #111; color: #eee; padding: 1rem; overflow: auto; max-height: 24rem; }
+  </style>
+</head>
+<body>
+  <h1>Cardputer FIDO local fixture</h1>
+  <p>This page talks only to <code>http://localhost:8765</code>. It creates no accounts.</p>
+  <p>
+    <label>Account name <input id="name" value="test-user"></label>
+  </p>
+  <button id="register">Register</button>
+  <button id="login">Sign in (discoverable)</button>
+  <pre id="output">Ready.</pre>
+  <script>
+    const output = document.getElementById("output");
+    const show = (value) => { output.textContent = JSON.stringify(value, null, 2); };
+    const b64url = (buffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const fromB64url = (value) => Uint8Array.from(
+      atob(value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4)),
+      (c) => c.charCodeAt(0)
+    );
+
+    async function challenge() {
+      const response = await fetch("/challenge");
+      if (!response.ok) throw new Error("challenge request failed");
+      return response.json();
+    }
+
+    function credentialJson(credential) {
+      const response = credential.response;
+      const result = {
+        id: credential.id,
+        rawId: b64url(credential.rawId),
+        type: credential.type,
+        response: {
+          clientDataJSON: b64url(response.clientDataJSON),
+        },
+      };
+      if (response.attestationObject) result.response.attestationObject = b64url(response.attestationObject);
+      if (response.authenticatorData) result.response.authenticatorData = b64url(response.authenticatorData);
+      if (response.signature) result.response.signature = b64url(response.signature);
+      if (response.userHandle) result.response.userHandle = b64url(response.userHandle);
+      return result;
+    }
+
+    async function verify(kind, challengeId, credential) {
+      const response = await fetch("/verify", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({kind, challengeId, credential}),
+      });
+      return response.json();
+    }
+
+    document.getElementById("register").addEventListener("click", async () => {
+      try {
+        const issued = await challenge();
+        const name = document.getElementById("name").value || "test-user";
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            challenge: fromB64url(issued.challenge),
+            rp: {id: issued.rpId, name: "Cardputer FIDO Test"},
+            user: {
+              id: crypto.getRandomValues(new Uint8Array(16)),
+              name,
+              displayName: name,
+            },
+            pubKeyCredParams: [{type: "public-key", alg: -7}],
+            authenticatorSelection: {
+              residentKey: "preferred",
+              userVerification: "preferred",
+            },
+            timeout: 60000,
+            attestation: "none",
+          },
+        });
+        show(await verify("create", issued.id, credentialJson(credential)));
+      } catch (error) {
+        show({ok: false, error: String(error)});
+      }
+    });
+
+    document.getElementById("login").addEventListener("click", async () => {
+      try {
+        const issued = await challenge();
+        const credential = await navigator.credentials.get({
+          publicKey: {
+            challenge: fromB64url(issued.challenge),
+            rpId: issued.rpId,
+            allowCredentials: [],
+            userVerification: "preferred",
+            timeout: 60000,
+          },
+        });
+        show(await verify("get", issued.id, credentialJson(credential)));
+      } catch (error) {
+        show({ok: false, error: String(error)});
+      }
+    });
+  </script>
+</body>
+</html>
