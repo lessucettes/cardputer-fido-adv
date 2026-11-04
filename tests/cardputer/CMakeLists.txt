@@ -67,3 +67,8 @@ cardputer_add_cxx_test(cardputer_presence_bridge
     "${ROOT}/src/cardputer/settings.cpp"
     "${ROOT}/src/cardputer/text.cpp"
 )
+
+cardputer_add_c_test(cardputer_credential_service
+    credential_service_test.c
+    "${ROOT}/src/cardputer/credential_service.c"
+)
