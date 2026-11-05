@@ -59,6 +59,7 @@ void Model::start(std::uint64_t now) {
     saved_key_count_ = 0;
     action_ = {};
     status_[0] = '\0';
+    status_since_ = 0;
 }
 
 void Model::set_screen_timeout(std::uint64_t milliseconds) {
@@ -72,6 +73,9 @@ void Model::note_activity(std::uint64_t now) {
 void Model::tick(std::uint64_t now) {
     if (pending_ && now - request_start_ >= request_timeout_) {
         finish(Decision::TimedOut, now);
+    }
+    if (status_[0] != '\0' && now - status_since_ >= 3000) {
+        status_[0] = '\0';
     }
     if (!pending_ && screen_timeout_ != 0 &&
         now - last_activity_ >= screen_timeout_) {
@@ -123,6 +127,7 @@ void Model::set_usb_mounted(bool mounted) {
 
 void Model::set_status(const char* text) {
     copy_text(status_, sizeof(status_), text);
+    status_since_ = last_activity_;
 }
 
 bool Model::take_action(Action* out) {

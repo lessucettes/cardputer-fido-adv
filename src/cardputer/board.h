@@ -30,6 +30,7 @@ public:
     std::uint8_t brightness() const { return brightness_; }
     std::uint8_t volume() const { return volume_; }
     void play(Tone tone);
+    void service_audio();
     void flush_input_feedback();
     void power_off();
 
@@ -48,6 +49,9 @@ private:
     std::uint64_t pressed_positions_ = 0;
     Tone pending_feedback_[kInputFeedbackCapacity] = {};
     std::uint8_t pending_feedback_count_ = 0;
+    Tone queued_tone_ = Tone::KeyPress;
+    bool audio_queued_ = false;
+    std::uint64_t audio_busy_until_ = 0;
 };
 
 }  // namespace cardputer

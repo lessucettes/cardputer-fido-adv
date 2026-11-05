@@ -19,7 +19,7 @@ def load_planner():
 
 
 def make_entry(label, part_type, subtype, offset, size, flags=0):
-    raw = struct.pack("<HBBII", 0xAA50, part_type, subtype, offset, size)
+    raw = struct.pack("<HBBII", 0x50AA, part_type, subtype, offset, size)
     raw += label.encode("ascii").ljust(16, b"\x00")
     raw += struct.pack("<I", flags)
     assert len(raw) == 32
@@ -28,7 +28,8 @@ def make_entry(label, part_type, subtype, offset, size, flags=0):
 
 def make_table(entries):
     body = b"".join(entries)
-    return body + struct.pack("<H", 0xEBEB) + b"\x00" * 30 + hashlib.md5(body).digest()
+    end = struct.pack("<H", 0xEBEB) + b"\xff" * 14
+    return body + end + hashlib.md5(body).digest()
 
 
 class LauncherLayoutTest(unittest.TestCase):

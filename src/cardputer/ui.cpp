@@ -48,7 +48,23 @@ Settings applied_settings;
 Settings saved_settings;
 bool usb_mounted = false;
 int presence_kind_override = -1;
-uint32_t last_tone_generation = 0;
+volatile bool power_off_started = false;
+volatile bool power_off_failed = false;
+volatile uint32_t usb_sof_ms = 0;
+volatile bool usb_sof_seen = false;
+volatile bool usb_suspended = false;
+
+#ifdef ESP_PLATFORM
+void power_off_task(void*) {
+    if (!flash_commit_sync(5000)) {
+        power_off_failed = true;
+        vTaskDelete(NULL);
+        return;
+    }
+    board.power_off();
+    vTaskDelete(NULL);
+}
+#endif
 
 #ifdef ESP_PLATFORM
 SemaphoreHandle_t ui_mutex = nullptr;
@@ -132,12 +148,25 @@ void handle_action(const Action& action) {
         }
         case ActionType::PowerOff:
             board.flush_input_feedback();
+#ifdef ESP_PLATFORM
+            if (!power_off_started) {
+                power_off_started = true;
+                model.set_status("Powering off...");
+                if (xTaskCreate(power_off_task, "fido_poweroff", 4096, NULL, 1,
+                                NULL) != pdPASS) {
+                    power_off_started = false;
+                    model.set_status("Power off failed");
+                    board.play(Tone::Failure);
+                }
+            }
+#else
             if (!flash_commit_sync(5000)) {
                 model.set_status("Power off failed");
                 board.play(Tone::Failure);
             } else {
                 board.power_off();
             }
+#endif
             break;
         default:
             break;
@@ -202,7 +231,21 @@ extern "C" void cardputer_ui_pump(void) {
     bridge.tick(now);
 
     Model& model = bridge.model();
-    const bool mounted = tud_mounted();
+    static bool sof_enabled = false;
+    bool mounted = tud_mounted() && !usb_suspended;
+    if (mounted && !sof_enabled) {
+        tud_sof_cb_enable(true);
+        sof_enabled = true;
+    }
+    if (mounted && usb_sof_seen) {
+        const uint32_t now32 = static_cast<uint32_t>(now);
+        if (now32 - usb_sof_ms > 100) {
+            // On the Cardputer ADV there is no VBUS monitor. TinyUSB only
+            // reports umount when the host drives a disconnect; poll SOF so
+            // pulling the cable also clears the connected state.
+            mounted = false;
+        }
+    }
     if (mounted != usb_mounted) {
         if (!mounted) {
             bridge.cancel(bridge.active_generation(), now);
@@ -235,10 +278,13 @@ extern "C" void cardputer_ui_pump(void) {
         pump_credentials();
     }
 
-    if (bridge.pending() && bridge.active_generation() != last_tone_generation) {
-        last_tone_generation = bridge.active_generation();
-        board.play(Tone::Request);
+    if (power_off_failed) {
+        power_off_failed = false;
+        power_off_started = false;
+        model.set_status("Power off failed");
+        board.play(Tone::Failure);
     }
+
     board.render(model.view());
     ui_unlock();
 }
@@ -262,6 +308,7 @@ extern "C" std::uint32_t cardputer_presence_begin(std::uint32_t timeout_ms,
     const std::uint32_t generation =
         bridge.begin(kind, rp, rp_len, account, account_len, Board::now_ms(),
                      timeout_ms != 0 ? timeout_ms : 30000);
+    board.play(Tone::Request);
     ui_unlock();
     return generation;
 }
@@ -323,11 +370,29 @@ extern "C" void picokey_storage_failure(int status) {
     cardputer_storage_failure(status);
 }
 
+extern "C" void tud_mount_cb(void) {
+    usb_suspended = false;
+}
+
+extern "C" void tud_resume_cb(void) {
+    usb_suspended = false;
+}
+
 extern "C" void tud_umount_cb(void) {
+    usb_suspended = true;
+    usb_sof_seen = false;
     cardputer_presence_cancel(cardputer_presence_active());
 }
 
 extern "C" void tud_suspend_cb(bool remote_wakeup_en) {
     (void)remote_wakeup_en;
+    usb_suspended = true;
+    usb_sof_seen = false;
     cardputer_presence_cancel(cardputer_presence_active());
+}
+
+extern "C" void tud_sof_cb(uint32_t frame_count) {
+    (void)frame_count;
+    usb_sof_ms = static_cast<uint32_t>(Board::now_ms());
+    usb_sof_seen = true;
 }

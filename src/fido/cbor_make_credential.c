@@ -596,6 +596,17 @@ int cbor_make_credential(const uint8_t *data, size_t len) {
 #endif
             }
         }
+        else if (!(flags & FIDO2_AUT_FLAG_UP)) {
+            /* The PIN is optional, but user presence is still mandatory for
+             * this operation. Without this branch MakeCredential silently set
+             * the UP flag and created credentials without a physical check. */
+            if (check_user_presence() == false) {
+                CBOR_ERROR(CTAP2_ERR_OPERATION_DENIED);
+            }
+#ifndef ENABLE_EMULATION
+            button_pressed = true;
+#endif
+        }
         flags |= FIDO2_AUT_FLAG_UP;
         clearUserPresentFlag();
         clearUserVerifiedFlag();

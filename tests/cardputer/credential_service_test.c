@@ -129,6 +129,9 @@ int main(void) {
     require(backend.count == 1 && backend.items[0].id[0] == 2,
             "backend removed the selected credential");
     require(backend.remove_calls == 1, "one remove call");
+    items = cf_credential_items(&service, &count, &truncated);
+    require(items != NULL && count == 1 && items[0].id[0] == 2,
+            "credential service removes the deleted item from its snapshot");
 
     require(cf_credential_request_delete(&service, &id_one, 1) == CF_CRED_OK,
             "queue stale delete");

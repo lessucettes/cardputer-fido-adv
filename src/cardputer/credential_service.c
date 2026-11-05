@@ -72,10 +72,24 @@ static cf_cred_result run_delete(cf_credential_service *service) {
     const int rc = service->backend.remove(service->backend.ctx,
                                            service->pending_id,
                                            service->pending_id_len);
+    if (rc == 0) {
+        const size_t removed_len = service->pending_id_len;
+        for (size_t i = 0; i < service->count; ++i) {
+            if (service->items[i].id_len == removed_len &&
+                memcmp(service->items[i].id, service->pending_id,
+                       removed_len) == 0) {
+                for (size_t j = i + 1; j < service->count; ++j) {
+                    service->items[j - 1] = service->items[j];
+                }
+                --service->count;
+                break;
+            }
+        }
+        service->items_dirty = 1;
+    }
     memset(service->pending_id, 0, sizeof(service->pending_id));
     service->pending_id_len = 0;
     if (rc == 0) {
-        service->items_dirty = 1;
         return CF_CRED_RESULT_DELETED;
     }
     if (rc == 1) {

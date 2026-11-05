@@ -19,6 +19,22 @@ std::uint32_t hash_text(std::uint32_t hash, const char* text) {
     return hash;
 }
 
+M5Canvas frame_canvas(&M5.Display);
+bool frame_canvas_ready = false;
+
+bool ensure_frame_canvas() {
+    if (frame_canvas_ready) {
+        return true;
+    }
+    // The Cardputer ADV has no PSRAM. Allocate the 240x135 RGB565 buffer from
+    // internal RAM once so a full-frame update reaches the panel as one push
+    // instead of exposing an intermediate paper-coloured fill.
+    frame_canvas.setPsram(false);
+    frame_canvas.setColorDepth(16);
+    frame_canvas_ready = frame_canvas.createSprite(lcd::kWidth, lcd::kHeight) != nullptr;
+    return frame_canvas_ready;
+}
+
 }  // namespace
 
 void Board::render(const Snapshot& snapshot) {
@@ -56,6 +72,15 @@ void Board::render(const Snapshot& snapshot) {
     }
     rendered_ = true;
     last_hash_ = hash;
+
+    // Prompt screens are safety-critical and must be visible even if the
+    // optional full-frame buffer could not be allocated or pushed. Render
+    // them directly; use the buffered path for normal navigation frames.
+    if (snapshot.layout != Layout::Prompt && ensure_frame_canvas()) {
+        lcd::draw(frame_canvas, snapshot);
+        frame_canvas.pushSprite(0, 0);
+        return;
+    }
 
     M5.Display.setFont(&fonts::Font0);
     M5.Display.startWrite();

@@ -93,12 +93,14 @@ void Board::flush_input_feedback() {
     for (std::uint8_t i = 0; i < count; ++i) {
         play(pending_feedback_[i]);
     }
+    service_audio();
 }
 
 void Board::poll_input() {
     // Bound feedback latency to one poll if the UI did not flush it right
     // after applying a settings change. Playing from here never sleeps.
     flush_input_feedback();
+    service_audio();
     if (!keyboard_ok_) {
         keys_ = Keys{};
         pressed_positions_ = 0;
@@ -120,6 +122,7 @@ void Board::poll_input() {
     pressed_positions_ = current_positions;
 
     keys_ = read_keys(keyboard_);
+    service_audio();
 }
 
 }  // namespace cardputer

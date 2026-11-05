@@ -112,6 +112,7 @@ private:
     std::uint64_t screen_timeout_ = 60000;
     std::uint64_t request_start_ = 0;
     std::uint64_t request_timeout_ = 30000;
+    std::uint64_t status_since_ = 0;
     Keys previous_{};
     bool screen_on_ = true;
     bool blocked_until_release_ = false;

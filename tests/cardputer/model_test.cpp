@@ -288,6 +288,21 @@ static void test_screen_off_snapshot() {
     require(v.row_count == 0, "no rows while off");
 }
 
+static void test_status_expiry() {
+    Model m;
+    m.start(0);
+    m.set_screen_timeout(0);
+    m.set_status("Power off failed");
+    require(std::strcmp(m.view().status, "Power off failed") == 0,
+            "status is visible");
+    m.tick(2999);
+    require(std::strcmp(m.view().status, "Power off failed") == 0,
+            "status stays briefly");
+    m.tick(3000);
+    require(std::strcmp(m.view().status, "USB disconnected") == 0,
+            "status expires back to the normal USB label");
+}
+
 int main() {
     test_appendix_a();
     test_main_menu();
@@ -296,6 +311,7 @@ int main() {
     test_settings();
     test_request_overlay();
     test_screen_off_snapshot();
+    test_status_expiry();
     std::puts("PASS: keyboard wake, menu, settings and request decisions");
     return 0;
 }

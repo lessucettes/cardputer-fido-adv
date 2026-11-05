@@ -13,9 +13,10 @@ import json
 import pathlib
 import struct
 
-MAGIC = 0xAA50
+MAGIC = 0x50AA  # bytes aa 50, little-endian
 END_MAGIC = 0xEBEB
 ENTRY_SIZE = 32
+END_MARKER_SIZE = 16
 STORE_SIZE = 0x102000
 ALIGN = 0x1000
 TABLE_END = 0x9000
@@ -39,7 +40,7 @@ def parse_table(data: bytes) -> list[dict]:
     while position + ENTRY_SIZE <= len(data):
         magic = struct.unpack_from("<H", data, position)[0]
         if magic == END_MAGIC:
-            stored = data[position + ENTRY_SIZE : position + ENTRY_SIZE + 16]
+            stored = data[position + END_MARKER_SIZE : position + ENTRY_SIZE]
             if len(stored) != 16:
                 raise LayoutError("missing partition table MD5")
             if hashlib.md5(bytes(body)).digest() != stored:
