@@ -5,7 +5,7 @@
 namespace cardputer {
 
 struct Settings {
-    std::uint8_t volume = 0;
+    std::uint8_t volume = 30;
     std::uint8_t brightness = 60;
     std::uint8_t timeout_index = 2;
 };

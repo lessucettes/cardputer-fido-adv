@@ -216,7 +216,7 @@ static void test_saved_keys_boundary() {
 static void test_settings() {
     Model m;
     m.start(0);
-    m.set_settings(Settings{});
+    m.set_settings(Settings{0, 60, 2});
     tap(m, key_down(), 100);
     tap(m, key_enter(), 200);
     Snapshot v = m.view();
@@ -264,7 +264,7 @@ static void test_request_overlay() {
     require(v.row_count == 2, "RP and account rows");
     require(std::strcmp(v.rows[0].text, "example.com") == 0, "RP row");
     require(std::strcmp(v.rows[1].text, "alice") == 0, "account row");
-    require(std::strcmp(v.footer, "Enter: Confirm  Del: Cancel") == 0,
+    require(std::strcmp(v.footer, "ENT:YES DEL:NO") == 0,
             "request footer");
 
     tap(m, key_enter(), 200);

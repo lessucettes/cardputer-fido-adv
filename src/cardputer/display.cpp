@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "M5Unified.h"
+#include "view.h"
 
 namespace cardputer {
 namespace {
@@ -16,15 +17,6 @@ std::uint32_t hash_text(std::uint32_t hash, const char* text) {
         hash *= 16777619u;
     }
     return hash;
-}
-
-void print_clipped(const char* text, std::size_t max_chars) {
-    if (text == nullptr) {
-        return;
-    }
-    for (std::size_t i = 0; i < max_chars && text[i] != '\0'; ++i) {
-        M5.Display.print(text[i]);
-    }
 }
 
 }  // namespace
@@ -43,9 +35,20 @@ void Board::render(const Snapshot& snapshot) {
     hash = hash_text(hash, snapshot.title);
     hash = hash_text(hash, snapshot.status);
     hash = hash_text(hash, snapshot.footer);
+    hash = hash_text(hash, snapshot.value);
+    hash ^= static_cast<std::uint32_t>(snapshot.layout);
+    hash *= 16777619u;
+    hash ^= static_cast<std::uint32_t>(snapshot.icon);
+    hash *= 16777619u;
+    hash ^= static_cast<std::uint32_t>(snapshot.meter);
+    hash *= 16777619u;
+    hash ^= static_cast<std::uint32_t>(snapshot.row_count);
+    hash *= 16777619u;
     for (int i = 0; i < snapshot.row_count; ++i) {
         hash = hash_text(hash, snapshot.rows[i].text);
         hash ^= snapshot.rows[i].selected ? 1u : 0u;
+        hash *= 16777619u;
+        hash ^= static_cast<std::uint32_t>(snapshot.rows[i].icon);
         hash *= 16777619u;
     }
     if (rendered_ && hash == last_hash_) {
@@ -54,47 +57,15 @@ void Board::render(const Snapshot& snapshot) {
     rendered_ = true;
     last_hash_ = hash;
 
-    M5.Display.fillScreen(TFT_BLACK);
-    M5.Display.setTextWrap(false);
-
-    M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Display.setTextSize(2);
-    M5.Display.setCursor(4, 4);
-    print_clipped(snapshot.title, 19);
-
-    M5.Display.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    M5.Display.setTextSize(1);
-    M5.Display.setCursor(4, 26);
-    print_clipped(snapshot.status, 39);
-
-    int y = 42;
-    for (int i = 0; i < snapshot.row_count && i < 4; ++i) {
-        M5.Display.setTextColor(snapshot.rows[i].selected ? TFT_YELLOW : TFT_WHITE,
-                                TFT_BLACK);
-        M5.Display.setTextSize(2);
-        M5.Display.setCursor(4, y);
-        M5.Display.print(snapshot.rows[i].selected ? "> " : "  ");
-        print_clipped(snapshot.rows[i].text, 17);
-        y += 22;
-    }
-
-    M5.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    M5.Display.setTextSize(1);
-    M5.Display.setCursor(4, M5.Display.height() - 12);
-    print_clipped(snapshot.footer, 39);
+    M5.Display.setFont(&fonts::Font0);
+    M5.Display.startWrite();
+    lcd::draw(M5.Display, snapshot);
+    M5.Display.endWrite();
 }
 
 void Board::show_message(const char* title, const char* detail) {
-    M5.Display.fillScreen(TFT_BLACK);
-    M5.Display.setTextWrap(false);
-    M5.Display.setTextColor(TFT_RED, TFT_BLACK);
-    M5.Display.setTextSize(2);
-    M5.Display.setCursor(4, 12);
-    print_clipped(title, 19);
-    M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Display.setTextSize(1);
-    M5.Display.setCursor(4, 44);
-    print_clipped(detail, 39);
+    M5.Display.setFont(&fonts::Font0);
+    lcd::message(M5.Display, title, detail);
     rendered_ = true;
     last_hash_ = 0;
 }

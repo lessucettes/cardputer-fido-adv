@@ -48,6 +48,12 @@ cardputer_add_cxx_test(cardputer_text
     "${ROOT}/src/cardputer/text.cpp"
 )
 
+cardputer_add_cxx_test(cardputer_view
+    view_test.cpp
+    "${ROOT}/src/cardputer/model.cpp"
+    "${ROOT}/src/cardputer/settings.cpp"
+)
+
 cardputer_add_c_test(cardputer_key_store
     key_store_test.c
     fake_flash.c

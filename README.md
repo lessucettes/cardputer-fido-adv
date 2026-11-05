@@ -11,6 +11,11 @@ the host-side logic is covered by native tests, but the current candidate has
 
 - USB HID FIDO2/CTAP2 authenticator with CTAP1/U2F retained.
 - Three-item English menu: `Saved Keys`, `Settings`, `Power Off`.
+- VMU-inspired LCD interface: large pixel icons, a light/dark high-contrast
+  palette, inverted selection cards, and 16-pixel text (24-pixel setting values).
+- Short keyboard feedback sounds, with separate navigation, select and back
+  cues. First-boot volume is 30%; `Volume: 0` mutes all sounds, and an existing
+  saved mute setting is preserved.
 - `Enter` confirms; the physical `Del` (backspace) key cancels.
 - Any keyboard key wakes the screen. A waking press is consumed and cannot
   approve, delete or navigate until every key is released.

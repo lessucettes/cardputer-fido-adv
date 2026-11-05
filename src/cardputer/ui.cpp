@@ -95,7 +95,7 @@ void refresh_saved_keys() {
     }
     bridge.model().set_saved_keys(keys, used);
     if (truncated) {
-        bridge.model().set_status("More keys than can be shown");
+        bridge.model().set_status("Key list limited");
     }
 }
 
@@ -116,7 +116,7 @@ void handle_action(const Action& action) {
             } else {
                 model.set_settings(saved_settings);
                 apply_settings(saved_settings);
-                model.set_status("Could not save settings");
+                model.set_status("Save failed");
                 board.play(Tone::Failure);
             }
             break;
@@ -126,13 +126,14 @@ void handle_action(const Action& action) {
             if (status == CF_CRED_BUSY) {
                 model.set_status("Request in progress");
             } else if (status != CF_CRED_OK) {
-                model.set_status("Could not delete key");
+                model.set_status("Delete failed");
             }
             break;
         }
         case ActionType::PowerOff:
+            board.flush_input_feedback();
             if (!flash_commit_sync(5000)) {
-                model.set_status("Could not power off safely");
+                model.set_status("Power off failed");
                 board.play(Tone::Failure);
             } else {
                 board.power_off();
@@ -158,7 +159,7 @@ void pump_credentials() {
         model.set_status("Protected key");
         board.play(Tone::Failure);
     } else if (result == CF_CRED_RESULT_ERROR) {
-        model.set_status("Could not access saved keys");
+        model.set_status("Key list failed");
         board.play(Tone::Failure);
     }
 }
@@ -223,11 +224,12 @@ extern "C" void cardputer_ui_pump(void) {
         if (draft.volume != board.volume()) {
             board.set_volume(draft.volume);
         }
-    } else if (model.settings().volume != applied_settings.volume ||
-               model.settings().brightness != applied_settings.brightness ||
+    } else if (model.settings().volume != board.volume() ||
+               model.settings().brightness != board.brightness() ||
                model.settings().timeout_index != applied_settings.timeout_index) {
         apply_settings(model.settings());
     }
+    board.flush_input_feedback();
 
     if (!is_busy()) {
         pump_credentials();

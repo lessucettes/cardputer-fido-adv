@@ -5,9 +5,9 @@
 namespace cardputer {
 namespace {
 const char* const kMainItems[3] = {"Saved Keys", "Settings", "Power Off"};
-const char* const kMainFooter = "Enter: Select  Del: Back";
-const char* const kRequestFooter = "Enter: Confirm  Del: Cancel";
-const char* const kEditFooter = "Left/Right: Change  Enter: Save";
+const char* const kMainFooter = "ENT:OK DEL:BACK";
+const char* const kRequestFooter = "ENT:YES DEL:NO";
+const char* const kEditFooter = "ENT:SAVE DEL:BACK";
 constexpr int kMainCount = 3;
 
 bool pressed(bool now, bool before) {
@@ -301,12 +301,15 @@ Snapshot Model::view() const {
     out.screen_on = screen_on_;
     out.status = status_[0] != '\0'
                      ? status_
-                     : (usb_mounted_ ? "Waiting for a request"
-                                     : "Connect USB to a computer");
+                     : (screen_ == Screen::MainMenu && !pending_
+                            ? (usb_mounted_ ? "USB connected" : "USB disconnected")
+                            : "");
     if (!screen_on_) {
         return out;
     }
     if (pending_) {
+        out.layout = Layout::Prompt;
+        out.icon = request_.kind == RequestKind::Reset ? Icon::Trash : Icon::Request;
         switch (request_.kind) {
             case RequestKind::MakeCredential:
                 out.title = "Create passkey?";
@@ -343,11 +346,15 @@ Snapshot Model::view() const {
 
     switch (screen_) {
         case Screen::MainMenu:
+            out.layout = Layout::Carousel;
             out.title = "Cardputer FIDO";
             out.row_count = kMainCount;
             for (int i = 0; i < kMainCount; ++i) {
                 set_line(&out.rows[i], kMainItems[i], i == main_index_);
             }
+            out.rows[0].icon = Icon::Key;
+            out.rows[1].icon = Icon::Settings;
+            out.rows[2].icon = Icon::Power;
             out.footer = kMainFooter;
             break;
         case Screen::SavedKeys:
@@ -371,11 +378,13 @@ Snapshot Model::view() const {
                                            : (key.account[0] != '\0' ? key.account
                                                                     : "Unnamed account");
                     set_line(&out.rows[out.row_count++], name, first + i == key_index_);
+                    out.rows[out.row_count - 1].icon = key.protected_key ? Icon::Lock : Icon::Key;
                 }
             }
-            out.footer = "Enter: Open  Del: Back";
+            out.footer = "ENT:OPEN DEL:BACK";
             break;
         case Screen::KeyDetails: {
+            out.layout = Layout::Details;
             out.title = "Saved Key";
             const SavedKey* key = saved_key(key_index_);
             if (key != nullptr) {
@@ -387,10 +396,12 @@ Snapshot Model::view() const {
                          false);
                 set_line(&out.rows[out.row_count++], "Delete Key", true);
             }
-            out.footer = "Enter: Delete  Del: Back";
+            out.footer = "ENT:DEL DEL:BACK";
             break;
         }
         case Screen::ConfirmDeleteKey: {
+            out.layout = Layout::Prompt;
+            out.icon = Icon::Trash;
             out.title = "Delete key?";
             const SavedKey* key = saved_key(key_index_);
             if (key != nullptr) {
@@ -402,6 +413,7 @@ Snapshot Model::view() const {
             break;
         }
         case Screen::Settings:
+            out.layout = Layout::Carousel;
             out.title = "Settings";
             out.row_count = 3;
             {
@@ -414,9 +426,15 @@ Snapshot Model::view() const {
                               screen_timeout_labels[settings_.timeout_index]);
                 set_line(&out.rows[2], buffer, settings_index_ == 2);
             }
+            out.rows[0].icon = Icon::Volume;
+            out.rows[1].icon = Icon::Sun;
+            out.rows[2].icon = Icon::Clock;
             out.footer = kMainFooter;
             break;
         case Screen::SettingsEdit: {
+            out.layout = Layout::Editor;
+            static const Icon icons[3] = {Icon::Volume, Icon::Sun, Icon::Clock};
+            out.icon = icons[edit_field_];
             static const char* const labels[3] = {"Volume", "Brightness", "Screen Timeout"};
             out.title = labels[edit_field_];
             out.row_count = 1;
@@ -430,6 +448,13 @@ Snapshot Model::view() const {
                               screen_timeout_labels[draft_.timeout_index]);
             }
             set_line(&out.rows[0], buffer, true);
+            if (edit_field_ < 2) {
+                const unsigned value = edit_field_ == 0 ? draft_.volume : draft_.brightness;
+                std::snprintf(out.value, sizeof(out.value), "%u%%", value);
+                out.meter = static_cast<int>(value);
+            } else {
+                copy_text(out.value, sizeof(out.value), screen_timeout_labels[draft_.timeout_index]);
+            }
             out.footer = kEditFooter;
             break;
         }

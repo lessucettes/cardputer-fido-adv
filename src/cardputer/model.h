@@ -8,6 +8,8 @@ enum class Decision { None, Confirm, Cancel, TimedOut };
 enum class RequestKind { Generic, MakeCredential, GetAssertion, Exclusion, Reset, Selection };
 enum class Screen { MainMenu, SavedKeys, KeyDetails, Settings, SettingsEdit, ConfirmDeleteKey };
 enum class ActionType { None, OpenSavedKeys, OpenSettings, PowerOff, DeleteKey, SaveSettings };
+enum class Layout { List, Carousel, Details, Prompt, Editor };
+enum class Icon { Key, Settings, Power, Volume, Sun, Clock, Lock, Trash, Request };
 
 struct Keys {
     bool any = false;
@@ -38,6 +40,7 @@ struct SavedKey {
 struct Line {
     char text[48] = {};
     bool selected = false;
+    Icon icon = Icon::Key;
 };
 
 struct Snapshot {
@@ -47,6 +50,10 @@ struct Snapshot {
     const char* footer = "";
     const char* status = "";
     bool screen_on = true;
+    Layout layout = Layout::List;
+    Icon icon = Icon::Key;
+    char value[16] = {};
+    int meter = -1;
 };
 
 struct Action {

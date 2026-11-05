@@ -36,10 +36,15 @@ ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
 Expected GREEN: exit 0, all selected tests pass, no sanitizer diagnostics.
-Observed on the current candidate: seven native tests pass
+Observed on the current candidate: eight native tests pass
 (`cardputer_model`, `cardputer_settings`, `cardputer_text`,
-`cardputer_key_store`, `cardputer_flash_layout`, `cardputer_presence_bridge`,
+`cardputer_view`, `cardputer_key_store`, `cardputer_flash_layout`, `cardputer_presence_bridge`,
 `cardputer_credential_service`).
+
+The view test exercises the production LCD layout on a recording display:
+240x135 bounds, nonoverlapping text, minimum 2x Font0 size, menu navigation,
+setting values, identity rows, destructive warnings and confirmation hints.
+It does not verify physical LCD contrast, display flicker or speaker quality.
 
 ## Isolated CTAP2 protocol tests
 
