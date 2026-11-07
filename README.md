@@ -1,6 +1,8 @@
 # Cardputer FIDO ADV
 
-A USB FIDO2/WebAuthn authenticator for the **M5Stack Cardputer ADV**.
+A simple vibe-coded project aimed at getting a quick and cheap FIDO2/WebAuthn
+authenticator out of a Cardputer ADV, for low-importance sites and testing
+FIDO2 projects. No ambitions, no guarantees and no real security.
 
 ![Cardputer FIDO ADV interface](docs/interface.png)
 
@@ -63,7 +65,8 @@ partition table for a particular board. Do not flash it as-is.
 
 ## Security limitations
 
-This is a programmable microcontroller, not a secure element.
+There is no real security here. This is a programmable microcontroller, not a
+secure element.
 
 - No Secure Boot, flash encryption, eFuse provisioning or secure element.
   Device secrets live in internal flash and can be read or replaced by an
