@@ -5,7 +5,7 @@
 namespace cardputer {
 namespace {
 const char* const kMainItems[3] = {"Saved Keys", "Settings", "Power Off"};
-const char* const kMainFooter = "ENT:OK DEL:BACK";
+const char* const kMainFooter = "ENT:OK";
 const char* const kRequestFooter = "ENT:YES DEL:NO";
 const char* const kEditFooter = "ENT:SAVE DEL:BACK";
 constexpr int kMainCount = 3;
@@ -434,7 +434,7 @@ Snapshot Model::view() const {
             out.rows[0].icon = Icon::Volume;
             out.rows[1].icon = Icon::Sun;
             out.rows[2].icon = Icon::Clock;
-            out.footer = kMainFooter;
+            out.footer = "ENT:OK DEL:BACK";
             break;
         case Screen::SettingsEdit: {
             out.layout = Layout::Editor;
