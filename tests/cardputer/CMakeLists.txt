@@ -43,6 +43,14 @@ cardputer_add_cxx_test(cardputer_settings
     "${ROOT}/src/cardputer/settings.cpp"
 )
 
+cardputer_add_cxx_test(cardputer_audio
+    audio_test.cpp
+    "${ROOT}/src/cardputer/audio.cpp"
+)
+target_include_directories(cardputer_audio PRIVATE "${CMAKE_CURRENT_LIST_DIR}/audio_stub")
+# Match the ESP32-S3 char ABI used by the keyboard header's key codes.
+target_compile_options(cardputer_audio PRIVATE -funsigned-char)
+
 cardputer_add_cxx_test(cardputer_text
     text_test.cpp
     "${ROOT}/src/cardputer/text.cpp"

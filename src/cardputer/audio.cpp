@@ -72,6 +72,11 @@ void Board::service_audio() {
     if (M5.Speaker.isPlaying(0) || Board::now_ms() < audio_busy_until_) {
         return;
     }
+    // M5Unified 0.2.13 playRaw() returns true even if begin() fails.
+    // Keep the pending event until the speaker can actually start.
+    if (!M5.Speaker.begin()) {
+        return;
+    }
     const Tone tone = queued_tone_;
     const ToneSpec spec = tone_spec(tone);
     const std::size_t samples = std::min<std::size_t>(

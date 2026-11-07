@@ -36,10 +36,15 @@ ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
 Expected GREEN: exit 0, all selected tests pass, no sanitizer diagnostics.
-Observed on the current candidate: eight native tests pass
-(`cardputer_model`, `cardputer_settings`, `cardputer_text`,
-`cardputer_view`, `cardputer_key_store`, `cardputer_flash_layout`, `cardputer_presence_bridge`,
-`cardputer_credential_service`).
+Observed on the current candidate: nine native tests pass
+(`cardputer_model`, `cardputer_settings`, `cardputer_audio`, `cardputer_text`,
+`cardputer_view`, `cardputer_key_store`, `cardputer_flash_layout`,
+`cardputer_presence_bridge`, `cardputer_credential_service`).
+
+The audio test models the pinned M5Unified 0.2.13 speaker contract, where
+`playRaw()` reports success even when `begin()` fails, and checks that a
+pending tone is kept until the speaker actually starts. It does not verify
+physical audio output.
 
 The view test exercises the production LCD layout on a recording display:
 240x135 bounds, nonoverlapping text, minimum 2x Font0 size, menu navigation,
