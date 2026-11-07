@@ -1,43 +1,33 @@
 # Cardputer FIDO ADV
 
-A USB FIDO2/WebAuthn authenticator for the M5Stack Cardputer ADV, built on a
-pinned Pico FIDO core and its matching Pico Keys SDK.
+A USB FIDO2/WebAuthn authenticator for the **M5Stack Cardputer ADV**.
 
-This is a **prototype**, not a certified security key. The firmware builds and
-the host-side logic is covered by native tests, but the current candidate has
-**not** been run on a Cardputer ADV, a browser or a Launcher installation.
+![Cardputer FIDO ADV interface](docs/interface.png)
 
 ## What it is
 
-- USB HID FIDO2/CTAP2 authenticator with CTAP1/U2F retained.
-- Three-item English menu: `Saved Keys`, `Settings`, `Power Off`.
-- VMU-inspired LCD interface: large pixel icons, a light/dark high-contrast
-  palette, inverted selection cards, and 16-pixel text (24-pixel setting values).
-- Short keyboard feedback sounds, with separate navigation, select and back
-  cues. First-boot volume is 30%; `Volume: 0` mutes all sounds, and an existing
-  saved mute setting is preserved.
-- `Enter` confirms; the physical `Del` (backspace) key cancels.
-- Any keyboard key wakes the screen. A waking press is consumed and cannot
-  approve, delete or navigate until every key is released.
-- Settings: `Volume`, `Brightness`, `Screen Timeout`; persisted in the existing
-  `nvs` partition under `cardfido_ui`.
-- Resident credentials can be listed and deleted locally with a fresh
-  confirmation. Non-resident credentials are not listed.
+Cardputer FIDO ADV turns the Cardputer into a USB HID security key with a
+small local menu, a physical confirmation button and persistent resident
+credentials. The UI is rendered at the panel's native 240×135 resolution;
+the image above is generated from the production LCD layout code.
 
-## What it is not
+- CTAP2/FIDO2 over USB HID, with CTAP1/U2F retained.
+- `Saved Keys`, `Settings` and `Power Off` menus.
+- `Enter` confirms; the physical `Del` key cancels.
+- Resident credentials can be listed and deleted locally after a fresh
+  confirmation.
+- Volume, brightness and screen timeout are stored in NVS.
+- Fail-closed key store: the firmware refuses to start if the required
+  `fido_store` partition is missing, malformed or overlapping.
 
-- No startup password, local vault PIN or unlock screen.
-- No eFuse provisioning, Secure Boot activation, flash encryption, JTAG
-  disabling or ROM-download disabling.
-- No WiFi, BLE, USB MSC, file manager, TOTP/OATH applet or secret export.
-- No backup UI. Register a second independent authenticator for important
-  accounts.
-- No claim of YubiKey-equivalent physical protection. Device secrets live in
-  internal flash and are readable with sufficient physical/flash access.
+The main flows — MakeCredential, GetAssertion with signature verification,
+discoverable credentials, Launcher installation and Power Off — have been
+exercised on a development Cardputer ADV. This is still a **prototype**, not
+a certified security key.
 
-## Building
+## Build
 
-Native logic tests (no ESP-IDF, no board):
+### Host tests
 
 ```sh
 cmake -S tests/cardputer -B build/cardputer-host -G Ninja \
@@ -46,52 +36,72 @@ cmake --build build/cardputer-host
 ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
-Isolated CTAP2 protocol tests (host emulator, no board or TPM):
+### Firmware
 
-```sh
-cmake -S . -B build/emulator -G Ninja \
-  -DENABLE_EMULATION=ON -DENABLE_DETERMINISTIC_OTP=ON
-cmake --build build/emulator --target pico_fido
-
-python3 -m venv .venv-protocol
-.venv-protocol/bin/pip install -r tests/cardputer/requirements-protocol.txt
-.venv-protocol/bin/python scripts/cardputer/run-protocol-tests.py \
-  --emulator build/emulator/pico_fido --reconnect-cases
-```
-
-Firmware (ESP-IDF v5.5.3, ESP32-S3):
+Requires ESP-IDF v5.5.3 and the ESP32-S3 toolchain:
 
 ```sh
 . "$HOME/esp/esp-idf-v5.5.3/export.sh"
 bash scripts/cardputer/build.sh
 python3 scripts/cardputer/check-build.py build/cardputer-adv
-python3 scripts/cardputer/package.py --build build/cardputer-adv --out dist/cardputer-adv
+python3 scripts/cardputer/package.py --build build/cardputer-adv \
+  --out dist/cardputer-adv
 ```
 
-The build script never flashes, erases or monitors a device.
+`build.sh` never flashes, erases or monitors a device.
 
-## Installation
+### Install through Launcher
 
-Only an app-only image is packaged. A pre-existing `fido_store` partition
-(type `0x40`, subtype `0x01`, size `0x102000`) is required. Ordinary Launcher
-app installation does not create it. See
-[`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md).
+The package is app-only. A pre-existing `fido_store` partition
+(type `0x40`, subtype `0x01`, size `0x102000`) is required; ordinary
+Launcher app installation does not create it. Back up the full flash before
+any partition operation and read
+[`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) first.
 
-The partition CSV under `config/cardputer_adv/` is a build fixture, not the
-partition table of any particular board. Do not flash it without a verified
-backup and an explicit hardware decision.
+The partition CSV under `config/cardputer_adv/` is a build fixture, not a
+partition table for a particular board. Do not flash it as-is.
+
+## Security limitations
+
+This is a programmable microcontroller, not a secure element.
+
+- No Secure Boot, flash encryption, eFuse provisioning or secure element.
+  Device secrets live in internal flash and can be read or replaced by an
+  attacker with physical access; that can clone the authenticator.
+- No startup PIN, local vault unlock or locked state. Anyone holding the
+  powered device can confirm requests and manage local resident keys.
+- A local `Enter` press is user presence, not user verification. Browser PIN
+  and UV behavior is separate.
+- CRC32 detects accidental corruption, not deliberate tampering. Logical
+  credential deletion is not guaranteed forensic erasure.
+- App updates are not signed or verified by this firmware. A malicious
+  Launcher image, partition change or firmware replacement has full control.
+- No backup/export. Losing or reformatting the device loses its credentials.
+- The code has not been independently audited or FIDO-certified; side-channel
+  and fault attacks are outside the current scope.
+
+Use disposable credentials during testing and register a second independent
+authenticator for accounts that matter.
 
 ## Documentation
 
-- [`docs/BUILD.md`](docs/BUILD.md) - host baseline and reproducible build
-- [`docs/DESIGN.md`](docs/DESIGN.md) - architecture and storage decisions
-- [`docs/SECURITY.md`](docs/SECURITY.md) - threat model and explicit limits
-- [`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) - install and update
-- [`docs/HARDWARE-VALIDATION.md`](docs/HARDWARE-VALIDATION.md) - required board tests
-- [`docs/UPSTREAM-README.md`](docs/UPSTREAM-README.md) - inherited Pico FIDO documentation
+- [`docs/BUILD.md`](docs/BUILD.md) — host, emulator and firmware builds
+- [`docs/DESIGN.md`](docs/DESIGN.md) — architecture and storage decisions
+- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model and explicit limits
+- [`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) — Launcher installation
+- [`docs/HARDWARE-VALIDATION.md`](docs/HARDWARE-VALIDATION.md) — hardware checks
+- [`docs/UPSTREAM-README.md`](docs/UPSTREAM-README.md) — inherited Pico FIDO documentation
+
+## Credits
+
+This project is based on [Pico FIDO](https://github.com/polhenarejos/pico-fido)
+by Pol Henarejos and uses the [Pico Keys SDK](https://github.com/polhenarejos/pico-keys-sdk).
+Board support uses M5Unified/M5GFX and M5Stack keyboard sources; their notices
+are retained in the source tree. This project is not affiliated with Pico FIDO
+or M5Stack.
+
+Development was assisted by **DeepSeek 4.1 Flash** and **GPT 6.1 Astra**.
 
 ## License
 
-The inherited Pico FIDO and Pico Keys SDK code is AGPL-3.0. Imported M5Stack
-keyboard sources are MIT. See `LICENSE`, `pico-keys-sdk/LICENSE` and the SPDX
-headers in `src/cardputer/keyboard/` and `src/cardputer/Adafruit_TCA8418/`.
+See [LICENSE](LICENSE) and the license files in the vendored components.

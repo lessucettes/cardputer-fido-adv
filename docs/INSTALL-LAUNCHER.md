@@ -2,10 +2,11 @@
 
 ## Current status
 
-The app-only package builds and its policy checks pass. The Launcher
-first-install procedure and the claim that a Launcher update preserves a
-custom type-`0x40` `fido_store` partition have **not** been demonstrated on a
-real device yet. Do not treat this document as a hardware guarantee.
+The app-only package builds and its policy checks pass. First installation and
+app-only updates have been exercised on a development Cardputer ADV using the
+Launcher serial console. Treat that as one development result, not a guarantee
+for another board, Launcher revision or partition layout: re-check the actual
+partition table and keep a verified full-flash backup before writing.
 
 ## Required layout
 

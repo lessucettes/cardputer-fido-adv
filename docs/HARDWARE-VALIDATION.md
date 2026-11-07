@@ -5,16 +5,19 @@ by a USB data cable**. It checks the installed firmware, keyboard, display,
 browser interaction and reconnect behavior. It does not flash or repartition
 the device.
 
-**Current status: hardware UNTESTED.** Host tests, firmware builds and package
-checks have passed; they do not establish that the board works. Record only
-results you actually observe. Use disposable test credentials, not important
-accounts.
+**Current status: development unit exercised, not certified.** Core CTAP
+flows, resident credentials, local UI behavior and Launcher installation were
+checked on one Cardputer ADV. This procedure remains the required acceptance
+test for every candidate and board; record only results you actually observe.
+Use disposable test credentials, not important accounts.
 
 ## Before starting
 
 - The FIDO firmware must already be installed and running. If not, stop here
   and read [Launcher installation and updates](INSTALL-LAUNCHER.md). First
-  installation is a separate task and is not yet hardware-validated.
+  installation is a separate task; the procedure was exercised on one
+  development unit but must still be repeated against your own backup and
+  partition layout.
 - The existing `fido_store` partition must be valid. A `Storage error` screen
   is a failure to investigate, not a reason to erase or regenerate the store.
 - Use a browser with USB security-key support and allow access to the device.
