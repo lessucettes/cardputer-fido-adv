@@ -46,6 +46,14 @@ The view test exercises the production LCD layout on a recording display:
 setting values, identity rows, destructive warnings and confirmation hints.
 It does not verify physical LCD contrast, display flicker or speaker quality.
 
+The Saved Keys adapter regression uses the host FIDO headers and real identity
+hashing with an in-memory resident backend. After configuring the emulator below:
+
+```sh
+cmake --build build/emulator --target fido_cardputer_credentials_test
+ctest --test-dir build/emulator --output-on-failure -R '^fido_cardputer_credentials_test$'
+```
+
 ## Isolated CTAP2 protocol tests
 
 The host emulator is driven over its TCP HID socket. This exercises CTAPHID

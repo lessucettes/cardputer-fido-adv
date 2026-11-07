@@ -125,9 +125,9 @@ void Model::set_usb_mounted(bool mounted) {
     usb_mounted_ = mounted;
 }
 
-void Model::set_status(const char* text) {
+void Model::set_status(const char* text, std::uint64_t now) {
     copy_text(status_, sizeof(status_), text);
-    status_since_ = last_activity_;
+    status_since_ = now;
 }
 
 bool Model::take_action(Action* out) {
@@ -226,11 +226,11 @@ void Model::navigate(Keys keys) {
 
         case Screen::ConfirmDeleteKey: {
             const SavedKey* key = saved_key(key_index_);
-            if (enter && key != nullptr) {
+            if (del) {
+                screen_ = Screen::KeyDetails;
+            } else if (enter && key != nullptr) {
                 action_.type = ActionType::DeleteKey;
                 action_.key = *key;
-                screen_ = Screen::KeyDetails;
-            } else if (del) {
                 screen_ = Screen::KeyDetails;
             }
             break;

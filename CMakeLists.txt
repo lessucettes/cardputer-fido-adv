@@ -281,6 +281,21 @@ if(NOT ESP_PLATFORM)
         target_link_libraries(fido_resident_container_test PRIVATE mbedtls)
         add_test(NAME fido_resident_container_test COMMAND fido_resident_container_test)
 
+        add_executable(fido_cardputer_credentials_test
+            ${CMAKE_CURRENT_LIST_DIR}/src/fido/cardputer_credentials.c
+            ${CMAKE_CURRENT_LIST_DIR}/src/cardputer/credential_service.c
+            ${CMAKE_CURRENT_LIST_DIR}/tests/cardputer/credential_adapter_test.c
+        )
+        target_include_directories(fido_cardputer_credentials_test PRIVATE
+            ${INCLUDES} ${CMAKE_CURRENT_LIST_DIR}/src/cardputer)
+        if(MSVC)
+            target_compile_options(fido_cardputer_credentials_test PRIVATE /W4 /WX)
+        else()
+            target_compile_options(fido_cardputer_credentials_test PRIVATE -Wall -Wextra -Werror)
+        endif()
+        target_link_libraries(fido_cardputer_credentials_test PRIVATE mbedtls tinycbor)
+        add_test(NAME fido_cardputer_credentials_test COMMAND fido_cardputer_credentials_test)
+
         add_executable(fido_oath_container_test
             ${CMAKE_CURRENT_LIST_DIR}/pico-keys-sdk/src/fs/object_container.c
             ${CMAKE_CURRENT_LIST_DIR}/pico-keys-sdk/src/fs/object_container_store.c

@@ -130,15 +130,16 @@ static int upstream_remove(void *ctx, const uint8_t *id, size_t id_len) {
             credential_free(&cred);
             continue;
         }
-        if (cred.extensions.credProtect == CRED_PROT_UV_REQUIRED) {
-            credential_free(&cred);
-            return -2;
-        }
         uint8_t identity[32];
         const int identified = credential_identity(&cred, identity);
+        const bool protected_key =
+            cred.extensions.credProtect == CRED_PROT_UV_REQUIRED;
         credential_free(&cred);
         if (identified != 0 || memcmp(identity, id, 32) != 0) {
             continue;
+        }
+        if (protected_key) {
+            return -2;
         }
         const bool legacy_rp = !resident_container_is_marker(ef);
         if (credential_resident_delete(ef) != PICOKEYS_OK) {

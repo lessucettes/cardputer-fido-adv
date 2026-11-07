@@ -101,10 +101,10 @@ int main() {
                 display.output.find("Settings") != std::string::npos,
             "navigation replaces the visible selected card");
     tap(model, enter);
-    model.set_status("Save failed");
+    model.set_status("Save failed", 2);
     require(render(model).output.find("Save failed") != std::string::npos,
             "local errors remain visible without a USB status");
-    model.set_status("");
+    model.set_status("", 2);
     for (int setting = 0; setting < 3; ++setting) {
         render(model);
         tap(model, enter);
@@ -135,6 +135,21 @@ int main() {
     tap(model, enter);
     render(model); // Local delete confirmation.
 
+    // This account fits one LCD row, but needs more than 47 UTF-8 bytes.
+    std::string account;
+    for (int i = 0; i < 16; ++i) {
+        account += "\xE7\x94\xA8";
+    }
+    account += ".io";
+    std::strcpy(keys[0].account, account.c_str());
+    model.set_saved_keys(keys, 3);
+    const std::string visible_account = std::string(16, '?') + ".io\n";
+    require(render(model).output.find(visible_account) != std::string::npos,
+            "delete prompt preserves the suffix of a fitting UTF-8 account");
+    tap(model, back);
+    require(render(model).output.find(visible_account) != std::string::npos,
+            "key details preserve the suffix of a fitting UTF-8 account");
+
     for (const auto kind : {RequestKind::Generic, RequestKind::MakeCredential,
                            RequestKind::GetAssertion, RequestKind::Exclusion,
                            RequestKind::Reset, RequestKind::Selection}) {
@@ -161,6 +176,13 @@ int main() {
         model.cancel_request(11);
         (void)model.take_decision();
     }
+    RequestInfo unicode_info;
+    std::strcpy(unicode_info.account, account.c_str());
+    model.begin_request(20, 100, unicode_info);
+    require(render(model).output.find(visible_account) != std::string::npos,
+            "presence prompt preserves the suffix of a fitting UTF-8 account");
+    model.cancel_request(21);
+    (void)model.take_decision();
     Display message;
     lcd::message(message, "Storage error", "The key store could not be read");
     Display unicode;

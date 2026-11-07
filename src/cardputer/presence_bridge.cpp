@@ -45,7 +45,11 @@ std::uint32_t PresenceBridge::begin(RequestKind kind, const char* rp_id,
 
 void PresenceBridge::cancel(std::uint32_t generation, std::uint64_t now) {
     last_now_ = now;
-    if (model_.pending() && model_.active_generation() == generation) {
+    const bool matches_reset = reset_stage_ == 2 &&
+                               generation == reset_original_generation_ &&
+                               model_.active_generation() == reset_second_generation_;
+    if (model_.pending() &&
+        (model_.active_generation() == generation || matches_reset)) {
         model_.cancel_request(now);
     }
 }

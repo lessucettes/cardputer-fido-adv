@@ -70,6 +70,8 @@ static void test_stale_and_cancel(void) {
     bridge.cancel(first, 101);
     require(bridge.take(first) == PresenceResult::Cancelled,
             "host cancellation is reported");
+    require(bridge.active_generation() == 0,
+            "no active prompt is reported after cancellation");
 
     const std::uint32_t second =
         bridge.begin(RequestKind::GetAssertion, "b.example", 9, nullptr, 0, 200,
@@ -140,6 +142,18 @@ static void test_reset_requires_two_presses() {
     tap(bridge, key_del(), 600);
     require(bridge.take(cancelled) == PresenceResult::Cancelled,
             "Del at the second stage leaves credentials intact");
+
+    const std::uint32_t host_cancelled =
+        bridge.begin(RequestKind::Reset, nullptr, 0, nullptr, 0, 700, 1000);
+    tap(bridge, key_enter(), 800);
+    require(bridge.take(host_cancelled) == PresenceResult::None, "reset armed");
+    bridge.cancel(cancelled, 810);
+    require(bridge.pending(), "stale cancellation cannot close a new reset");
+    bridge.cancel(host_cancelled, 820);
+    require(!bridge.pending(), "host cancellation closes the second reset stage");
+    tap(bridge, key_enter(), 830);
+    require(bridge.take(host_cancelled) == PresenceResult::Cancelled,
+            "cancelled reset cannot be confirmed by a later key press");
 }
 
 static void test_bounded_context(void) {

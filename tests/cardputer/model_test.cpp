@@ -189,6 +189,10 @@ static void test_saved_keys() {
     require(std::strcmp(v.title, "Delete key?") == 0, "delete confirmation");
     Action action;
     require(!m.take_action(&action), "confirmation alone does not delete");
+    tap(m, {true, true, true}, 350);
+    require(!m.take_action(&action), "Del wins over Enter in local deletion");
+    require(m.screen() == Screen::KeyDetails, "cancel returns to key details");
+    tap(m, key_enter(), 375);
     tap(m, key_enter(), 400);
     require(m.take_action(&action), "second Enter requests deletion");
     require(action.type == ActionType::DeleteKey, "delete action type");
@@ -292,7 +296,7 @@ static void test_status_expiry() {
     Model m;
     m.start(0);
     m.set_screen_timeout(0);
-    m.set_status("Power off failed");
+    m.set_status("Power off failed", 0);
     require(std::strcmp(m.view().status, "Power off failed") == 0,
             "status is visible");
     m.tick(2999);
@@ -301,6 +305,19 @@ static void test_status_expiry() {
     m.tick(3000);
     require(std::strcmp(m.view().status, "USB disconnected") == 0,
             "status expires back to the normal USB label");
+
+    // A slow operation can finish long after the key press that started it.
+    m.tick(10000);
+    m.set_status("Power off failed", 10000);
+    m.tick(10001);
+    require(std::strcmp(m.view().status, "Power off failed") == 0,
+            "delayed errors do not expire on the next frame");
+    m.tick(12999);
+    require(std::strcmp(m.view().status, "Power off failed") == 0,
+            "delayed errors remain visible for three seconds");
+    m.tick(13000);
+    require(std::strcmp(m.view().status, "USB disconnected") == 0,
+            "delayed errors still expire");
 }
 
 int main() {

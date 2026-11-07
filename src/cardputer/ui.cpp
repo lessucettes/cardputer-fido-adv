@@ -111,7 +111,7 @@ void refresh_saved_keys() {
     }
     bridge.model().set_saved_keys(keys, used);
     if (truncated) {
-        bridge.model().set_status("Key list limited");
+        bridge.model().set_status("Key list limited", Board::now_ms());
     }
 }
 
@@ -120,7 +120,7 @@ void handle_action(const Action& action) {
     switch (action.type) {
         case ActionType::OpenSavedKeys:
             if (cf_credential_request_list(&credentials) != CF_CRED_OK) {
-                model.set_status("Request in progress");
+                model.set_status("Request in progress", Board::now_ms());
             }
             break;
         case ActionType::SaveSettings:
@@ -132,7 +132,7 @@ void handle_action(const Action& action) {
             } else {
                 model.set_settings(saved_settings);
                 apply_settings(saved_settings);
-                model.set_status("Save failed");
+                model.set_status("Save failed", Board::now_ms());
                 board.play(Tone::Failure);
             }
             break;
@@ -140,9 +140,9 @@ void handle_action(const Action& action) {
             const cf_cred_status status = cf_credential_request_delete(
                 &credentials, action.key.id, action.key.id_len);
             if (status == CF_CRED_BUSY) {
-                model.set_status("Request in progress");
+                model.set_status("Request in progress", Board::now_ms());
             } else if (status != CF_CRED_OK) {
-                model.set_status("Delete failed");
+                model.set_status("Delete failed", Board::now_ms());
             }
             break;
         }
@@ -151,17 +151,17 @@ void handle_action(const Action& action) {
 #ifdef ESP_PLATFORM
             if (!power_off_started) {
                 power_off_started = true;
-                model.set_status("Powering off...");
+                model.set_status("Powering off...", Board::now_ms());
                 if (xTaskCreate(power_off_task, "fido_poweroff", 4096, NULL, 1,
                                 NULL) != pdPASS) {
                     power_off_started = false;
-                    model.set_status("Power off failed");
+                    model.set_status("Power off failed", Board::now_ms());
                     board.play(Tone::Failure);
                 }
             }
 #else
             if (!flash_commit_sync(5000)) {
-                model.set_status("Power off failed");
+                model.set_status("Power off failed", Board::now_ms());
                 board.play(Tone::Failure);
             } else {
                 board.power_off();
@@ -182,13 +182,13 @@ void pump_credentials() {
         board.play(Tone::Success);
         refresh_saved_keys();
     } else if (result == CF_CRED_RESULT_NOT_FOUND) {
-        model.set_status("Key not found");
+        model.set_status("Key not found", Board::now_ms());
         board.play(Tone::Failure);
     } else if (result == CF_CRED_RESULT_FORBIDDEN) {
-        model.set_status("Protected key");
+        model.set_status("Protected key", Board::now_ms());
         board.play(Tone::Failure);
     } else if (result == CF_CRED_RESULT_ERROR) {
-        model.set_status("Key list failed");
+        model.set_status("Key list failed", Board::now_ms());
         board.play(Tone::Failure);
     }
 }
@@ -205,7 +205,14 @@ extern "C" void cardputer_ui_init(void) {
     }
 #endif
     ui_lock();
-    board.begin();
+    if (!board.begin()) {
+        // Keep the fatal keyboard message visible; do not start a menu or
+        // USB authenticator that cannot receive presence confirmations.
+        ui_unlock();
+        for (;;) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
     bridge.start(Board::now_ms());
     if (load_settings(&saved_settings)) {
         // Loaded values are already validated by the NVS adapter.
@@ -281,7 +288,7 @@ extern "C" void cardputer_ui_pump(void) {
     if (power_off_failed) {
         power_off_failed = false;
         power_off_started = false;
-        model.set_status("Power off failed");
+        model.set_status("Power off failed", Board::now_ms());
         board.play(Tone::Failure);
     }
 

@@ -38,7 +38,8 @@ struct SavedKey {
 };
 
 struct Line {
-    char text[48] = {};
+    // Preserve complete RP/account UTF-8; the renderer clips by glyph count.
+    char text[256] = {};
     bool selected = false;
     Icon icon = Icon::Key;
 };
@@ -79,7 +80,7 @@ public:
     Decision take_decision();
     bool decision_pending() const { return decision_ != Decision::None; }
     std::uint32_t decision_generation() const { return decision_generation_; }
-    std::uint32_t active_generation() const { return active_generation_; }
+    std::uint32_t active_generation() const { return pending_ ? active_generation_ : 0; }
     const RequestInfo* active_request() const { return pending_ ? &request_ : nullptr; }
     RequestInfo request_info() const { return request_; }
 
@@ -96,7 +97,7 @@ public:
     const SavedKey* saved_key(int index) const;
     void set_usb_mounted(bool mounted);
     bool usb_mounted() const { return usb_mounted_; }
-    void set_status(const char* text);
+    void set_status(const char* text, std::uint64_t now);
 
     bool take_action(Action* out);
     Snapshot view() const;

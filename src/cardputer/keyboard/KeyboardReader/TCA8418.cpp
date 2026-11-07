@@ -42,7 +42,10 @@ void TCA8418KeyboardReader::begin()
     if (_interrupt_pin >= 0) {
         gpio_set_direction((gpio_num_t)_interrupt_pin, GPIO_MODE_INPUT);
         gpio_set_intr_type((gpio_num_t)_interrupt_pin, GPIO_INTR_ANYEDGE);
-        gpio_isr_handler_add((gpio_num_t)_interrupt_pin, gpio_isr_handler, (void*)this);
+        if (gpio_isr_handler_add((gpio_num_t)_interrupt_pin, gpio_isr_handler, (void*)this) != ESP_OK) {
+            printf("[error] TCA8418KeyboardReader: Failed to attach interrupt\n");
+            return;
+        }
     }
 
     // Enable interrupts
