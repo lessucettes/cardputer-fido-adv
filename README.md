@@ -90,7 +90,6 @@ authenticator for accounts that matter.
 - [`docs/SECURITY.md`](docs/SECURITY.md) — threat model and explicit limits
 - [`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) — Launcher installation
 - [`docs/HARDWARE-VALIDATION.md`](docs/HARDWARE-VALIDATION.md) — hardware checks
-- [`docs/UPSTREAM-README.md`](docs/UPSTREAM-README.md) — inherited Pico FIDO documentation
 
 ## Credits
 
@@ -104,4 +103,4 @@ Development was assisted by **DeepSeek 4.1 Flash** and **GPT 6.1 Astra**.
 
 ## License
 
-See [LICENSE](LICENSE) and the license files in the vendored components.
+AGPL-3.0

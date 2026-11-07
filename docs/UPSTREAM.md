@@ -18,19 +18,6 @@ The upstream development snapshot reports version 8.2 in `src/fido/version.h`.
 The latest stable upstream release at the time of the fork was v8.0. This port
 must be described as a development snapshot, not as a stable 8.2 release.
 
-## License notices
-
-- `src/` and the inherited Pico FIDO tree are distributed under the GNU Affero
-  General Public License v3.0; see `LICENSE`.
-- `pico-keys-sdk/` is distributed under the GNU Affero General Public License
-  v3.0; see `pico-keys-sdk/LICENSE`.
-- The imported M5Stack keyboard sources in `src/cardputer/keyboard/`,
-  `src/cardputer/common.h`, and `src/cardputer/Adafruit_TCA8418/` carry
-  `SPDX-License-Identifier: MIT` notices in their headers. The original
-  copyright and SPDX headers are preserved.
-- M5Unified is consumed as an external ESP-IDF managed component and is not
-  vendored here.
-
 ## Why the SDK is vendored
 
 Upstream `pico-fido` tracks `pico-keys-sdk` as a gitlink. The Cardputer port
