@@ -2,6 +2,7 @@ build*/
 *__pycache__*
 legacy/
 .DS_Store
+.codegraph
 
 # Fetched by pico-keys-sdk/cmake/deps.cmake at configure time.
 pico-keys-sdk/third-party/
