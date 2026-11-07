@@ -87,7 +87,6 @@ authenticator for accounts that matter.
 
 - [`docs/BUILD.md`](docs/BUILD.md) — host, emulator and firmware builds
 - [`docs/DESIGN.md`](docs/DESIGN.md) — architecture and storage decisions
-- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model and explicit limits
 - [`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) — Launcher installation
 - [`docs/HARDWARE-VALIDATION.md`](docs/HARDWARE-VALIDATION.md) — hardware checks
 
