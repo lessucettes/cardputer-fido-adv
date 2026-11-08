@@ -70,7 +70,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
     CborEncoder encoder, mapEncoder, mapEncoder2;
     uint8_t *raw_subpara = NULL;
     size_t raw_subpara_len = 0;
-    bool asserted = false, is_preview = *(data - 1) == 0x41, pinUvAuthProtocol_present = false; // Backwards compatibility
+    bool asserted = false, pinUvAuthProtocol_present = false;
 
     CBOR_CHECK(cbor_parser_init(data, len, 0, &parser, &map));
     uint64_t val_c = 1;
@@ -169,8 +169,8 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
             if (verify((uint8_t)pinUvAuthProtocol, paut.data, (const uint8_t *) "\x01", 1, pinUvAuthParam.data, pinUvAuthParam.len) != CborNoError) {
                 CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
             }
-            if (is_preview == false &&
-                (!(paut.permissions & CTAP_PERMISSION_CM) || paut.has_rp_id == true)) {
+            if (!(paut.permissions & CTAP_PERMISSION_CM) ||
+                paut.has_rp_id == true) {
                 CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
             }
         }
@@ -197,7 +197,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 if (verify((uint8_t)pinUvAuthProtocol, paut.data, (const uint8_t *) "\x02", 1, pinUvAuthParam.data, pinUvAuthParam.len) != CborNoError) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
-                if (is_preview == false && (!(paut.permissions & CTAP_PERMISSION_CM) || paut.has_rp_id == true)) {
+                if (!(paut.permissions & CTAP_PERMISSION_CM) || paut.has_rp_id == true) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
             }
@@ -261,9 +261,8 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 if (verify((uint8_t)pinUvAuthProtocol, paut.data, raw_subpara - 1, (uint16_t)(raw_subpara_len + 1), pinUvAuthParam.data, pinUvAuthParam.len) != CborNoError) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
-                if (is_preview == false &&
-                    (!(paut.permissions & CTAP_PERMISSION_CM) ||
-                    (paut.has_rp_id == true && memcmp(paut.rp_id_hash, rpIdHash.data, RP_ID_HASH_LEN) != 0))) {
+                if (!(paut.permissions & CTAP_PERMISSION_CM) ||
+                    (paut.has_rp_id == true && memcmp(paut.rp_id_hash, rpIdHash.data, RP_ID_HASH_LEN) != 0)) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
             }
@@ -457,7 +456,8 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
         if (verify((uint8_t)pinUvAuthProtocol, paut.data, raw_subpara - 1, (uint16_t)(raw_subpara_len + 1), pinUvAuthParam.data, pinUvAuthParam.len) != CborNoError) {
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }
-        if (is_preview == false && (!(paut.permissions & CTAP_PERMISSION_CM) || (paut.has_rp_id == true && memcmp(paut.rp_id_hash, rpIdHash.data, RP_ID_HASH_LEN) != 0))) {
+        /* Delete carries a credential ID, not an RP hash. Check the stored RP below. */
+        if (!(paut.permissions & CTAP_PERMISSION_CM)) {
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }
         for (int i = 0; i < MAX_RESIDENT_CREDENTIALS; i++) {
@@ -468,7 +468,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 if (credential_resident_rp_id_hash(ef, rp_id_hash) != PICOKEYS_OK) {
                     CBOR_ERROR(CTAP2_ERR_NOT_ALLOWED);
                 }
-                if (is_preview == false && paut.has_rp_id == true && mbedtls_ct_memcmp(paut.rp_id_hash, rp_id_hash, RP_ID_HASH_LEN) != 0) {
+                if (paut.has_rp_id == true && mbedtls_ct_memcmp(paut.rp_id_hash, rp_id_hash, RP_ID_HASH_LEN) != 0) {
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
                 if (credential_resident_delete(ef) != PICOKEYS_OK) {
@@ -485,7 +485,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 goto err; //no error
             }
         }
-        CBOR_ERROR(paut.has_rp_id && is_preview == false ? CTAP2_ERR_PIN_AUTH_INVALID : CTAP2_ERR_NO_CREDENTIALS);
+        CBOR_ERROR(paut.has_rp_id ? CTAP2_ERR_PIN_AUTH_INVALID : CTAP2_ERR_NO_CREDENTIALS);
     }
     else if (subcommand == 0x07) {
         if (credentialId.id.present == false || user.id.present == false) {
@@ -495,7 +495,8 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
         if (verify((uint8_t)pinUvAuthProtocol, paut.data, raw_subpara - 1, (uint16_t)(raw_subpara_len + 1), pinUvAuthParam.data, pinUvAuthParam.len) != CborNoError) {
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }
-        if (is_preview == false && (!(paut.permissions & CTAP_PERMISSION_CM) || (paut.has_rp_id == true && memcmp(paut.rp_id_hash, rpIdHash.data, RP_ID_HASH_LEN) != 0))) {
+        /* Update carries a credential ID, not an RP hash. Check the stored RP below. */
+        if (!(paut.permissions & CTAP_PERMISSION_CM)) {
             CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
         }
         for (int i = 0; i < MAX_RESIDENT_CREDENTIALS; i++) {
@@ -506,7 +507,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 if (credential_resident_rp_id_hash(ef, rp_id_hash) != PICOKEYS_OK || credential_load_resident(ef, rp_id_hash, &cred) != 0) {
                     CBOR_ERROR(CTAP2_ERR_NOT_ALLOWED);
                 }
-                if (is_preview == false && paut.has_rp_id == true && mbedtls_ct_memcmp(paut.rp_id_hash, rp_id_hash, RP_ID_HASH_LEN) != 0) {
+                if (paut.has_rp_id == true && mbedtls_ct_memcmp(paut.rp_id_hash, rp_id_hash, RP_ID_HASH_LEN) != 0) {
                     credential_free(&cred);
                     CBOR_ERROR(CTAP2_ERR_PIN_AUTH_INVALID);
                 }
@@ -532,7 +533,7 @@ int cbor_cred_mgmt(const uint8_t *data, size_t len) {
                 goto err; //no error
             }
         }
-        CBOR_ERROR(paut.has_rp_id && is_preview == false ? CTAP2_ERR_PIN_AUTH_INVALID : CTAP2_ERR_NO_CREDENTIALS);
+        CBOR_ERROR(paut.has_rp_id ? CTAP2_ERR_PIN_AUTH_INVALID : CTAP2_ERR_NO_CREDENTIALS);
     }
     else {
         CBOR_ERROR(CTAP1_ERR_INVALID_PARAMETER);

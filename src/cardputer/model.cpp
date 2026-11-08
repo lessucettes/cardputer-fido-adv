@@ -503,7 +503,8 @@ void Model::finish(Decision decision, std::uint64_t now) {
 }
 
 void Model::cancel_request(std::uint64_t now) {
-    if (pending_) {
+    // A key press is not committed until the protocol consumes its decision.
+    if (pending_ || decision_ == Decision::Confirm) {
         finish(Decision::Cancel, now);
     }
 }

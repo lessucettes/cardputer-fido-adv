@@ -408,6 +408,12 @@ int driver_process_usb_packet_hid(uint16_t read) {
             if (MSG_LEN(ctap_req) > CTAP_MAX_PACKET_SIZE) {
                 return ctap_error(CTAP1_ERR_INVALID_LEN);
             }
+            /* Echoes must fit TX as well as the larger reassembly buffer.
+             * Reserve a report for the sender's final padded fragment. */
+            if ((ctap_req->init.cmd == CTAPHID_PING || ctap_req->init.cmd == CTAPHID_SYNC) &&
+                (size_t)MSG_LEN(ctap_req) > sizeof(hid_tx[ITF_HID_CTAP].buffer) - HID_RPT_SIZE - 7) {
+                return ctap_error(CTAP1_ERR_INVALID_LEN);
+            }
             if (msg_packet.len > 0 && last_cmd_time + 100 > board_millis() &&
                 ctap_req->init.cmd != CTAPHID_INIT) {
                 if (last_req.cid != ctap_req->cid) { //We are in a transaction

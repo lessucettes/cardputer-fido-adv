@@ -14,6 +14,9 @@ credentials. The UI is rendered at the panel's native 240×135 resolution;
 the image above is generated from the production LCD layout code.
 
 - CTAP2/FIDO2 over USB HID, with CTAP1/U2F retained.
+- Credential management uses the standard CTAP2 command; the obsolete preview
+  command is rejected. The legacy vendor AUT lock cannot safely store current
+  device-key records, so enabling it is rejected and not advertised for them.
 - `Saved Keys`, `Settings` and `Power Off` menus.
 - `Enter` confirms; the physical `Del` key cancels.
 - Resident credentials can be listed and deleted locally after a fresh

@@ -209,6 +209,26 @@ def run_protocol_suite(emulator_path: pathlib.Path,
         assert "FIDO_2_0" in ctap.info.versions, "FIDO_2_0 missing"
         assert ctap.info.options.get("rk") is True, "resident keys unavailable"
         print("PASS: GetInfo reports CTAP2 and resident-key support")
+        assert 0x00043f56b34285e2 not in ctap.send_cbor(0x04)[0x15], "unsafe AUT lock advertised"
+
+        from fido2 import cbor
+        # Maps with duplicate fields cannot be represented by a Python dict.
+        for command, body in (
+            (0x02, b"\xa3" + cbor.encode(1) + cbor.encode(RP["id"]) +
+             cbor.encode(2) + cbor.encode(bytes(32)) + cbor.encode(3) +
+             b"\x81\xa3" + cbor.encode("id") + cbor.encode(b"first") +
+             cbor.encode("id") + cbor.encode(b"second") +
+             cbor.encode("type") + cbor.encode("public-key")),
+            (0x01, b"\xa4" + cbor.encode(1) + cbor.encode(bytes(32)) +
+             cbor.encode(2) + b"\xa2" + cbor.encode("id") +
+             cbor.encode(RP["id"]) + cbor.encode("id") + cbor.encode(RP["id"]) +
+             cbor.encode(3) + cbor.encode(create_user("duplicate")) +
+             cbor.encode(4) + cbor.encode(KEY_PARAMS)),
+        ):
+            _, _, response = hid.call(hid.CBOR, bytes([command]) + body)
+            assert response == bytes([CtapError.ERR.INVALID_CBOR]), response
+            ctap.get_info()
+        print("PASS: duplicate allocated CBOR fields are rejected")
 
         for protocol, auth_size in ((1, 16), (2, 32)):
             for size in (1, auth_size - 1, auth_size + 1):
@@ -388,6 +408,65 @@ def run_pin_suite(emulator_path: pathlib.Path,
         retries = pin.get_pin_retries()
         assert retries[0] == 7, retries
         print("PASS: PIN is set and a wrong PIN consumes one retry")
+        assert 0x00043f56b34285e2 not in ctap.send_cbor(0x04)[0x15], "unsafe AUT lock advertised"
+
+        from fido2 import cbor
+
+        def management_request(subcommand, params, auth_token):
+            signed = bytes([subcommand]) + (cbor.encode(params) if params else b"")
+            request = {1: subcommand, 3: 1,
+                       4: PinProtocolV1().authenticate(auth_token, signed)}
+            if params:
+                request[2] = params
+            return request
+
+        descriptor = {"type": "public-key", "id": dave_id}
+        operations = (
+            (1, None), (2, None),
+            (4, {1: hashlib.sha256(RP["id"].encode()).digest()}),
+            (6, {2: descriptor}),
+            (7, {2: descriptor, 3: create_user("dave")}),
+        )
+        ga_token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.GET_ASSERTION,
+            permissions_rpid=RP["id"],
+        )
+        for command, expected in ((0x41, CtapError.ERR.INVALID_COMMAND),
+                                  (0x0A, CtapError.ERR.PIN_AUTH_INVALID)):
+            for subcommand, params in operations:
+                try:
+                    ctap.send_cbor(command, management_request(subcommand, params, ga_token))
+                except CtapError as exc:
+                    assert exc.code == expected, (command, subcommand, exc)
+                else:
+                    raise AssertionError("GA token authorized credential management")
+        cdh = hashlib.sha256(b"ga-token-control").digest()
+        assertion = ctap.get_assertion(
+            RP["id"], cdh, allow_list=[descriptor],
+            pin_uv_param=PinProtocolV1().authenticate(ga_token, cdh), pin_uv_protocol=1,
+        )
+        assertion.verify(cdh, dave.auth_data.credential_data.public_key)
+        print("PASS: GA token cannot manage credentials or use the preview alias")
+
+        bound_token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT,
+            permissions_rpid="other.example",
+        )
+        for subcommand, params in operations:
+            try:
+                ctap.send_cbor(0x0A, management_request(subcommand, params, bound_token))
+            except CtapError as exc:
+                assert exc.code == CtapError.ERR.PIN_AUTH_INVALID, (subcommand, exc)
+            else:
+                raise AssertionError("RP-bound token accessed another RP")
+        bound_token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT,
+            permissions_rpid=RP["id"],
+        )
+        bound_cm = CredentialManagement(ctap, PinProtocolV1(), bound_token)
+        assert len(bound_cm.enumerate_creds(hashlib.sha256(RP["id"].encode()).digest())) == 2
+        ctap.send_cbor(0x0A, management_request(7, {2: descriptor, 3: create_user("dave")}, bound_token))
+        print("PASS: credential management enforces stored-credential RP binding")
 
         token = pin.get_pin_token(
             "123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
@@ -400,7 +479,15 @@ def run_pin_suite(emulator_path: pathlib.Path,
         assert len(creds) == 2, len(creds)
         print("PASS: credential management enumerates RPs and credentials")
 
-        cm.delete_cred({"type": "public-key", "id": carol_id})
+        bound_token = pin.get_pin_token(
+            "123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT,
+            permissions_rpid=RP["id"],
+        )
+        CredentialManagement(ctap, PinProtocolV1(), bound_token).delete_cred(
+            {"type": "public-key", "id": carol_id}
+        )
+        token = pin.get_pin_token("123456", permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT)
+        cm = CredentialManagement(ctap, PinProtocolV1(), token)
         assert cm.get_metadata()[1] == 1
         remaining = cm.enumerate_creds(hashlib.sha256(RP["id"].encode()).digest())
         assert len(remaining) == 1, len(remaining)

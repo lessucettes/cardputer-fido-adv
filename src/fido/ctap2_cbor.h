@@ -146,6 +146,7 @@ typedef struct CborCharString {
 
 #define CBOR_FIELD_GET_BYTES(v, _n) \
     do { \
+        if ((v).present) { CBOR_ERROR(CTAP2_ERR_INVALID_CBOR); } \
         CBOR_ASSERT(cbor_value_is_byte_string(&(_f##_n)) == true); \
         CBOR_CHECK(cbor_value_dup_byte_string(&(_f##_n), &(v).data, &(v).len, &(_f##_n))); \
         (v).present = true; \
@@ -153,6 +154,7 @@ typedef struct CborCharString {
 
 #define CBOR_FIELD_GET_TEXT(v, _n) \
     do { \
+        if ((v).present) { CBOR_ERROR(CTAP2_ERR_INVALID_CBOR); } \
         CBOR_ASSERT(cbor_value_is_text_string(&(_f##_n)) == true); \
         CBOR_CHECK(cbor_value_dup_text_string(&(_f##_n), &(v).data, &(v).len, &(_f##_n))); \
         (v).present = true; \
@@ -175,17 +177,13 @@ typedef struct CborCharString {
 
 #define CBOR_FIELD_KEY_TEXT_VAL_TEXT(_n, _t, _v) \
     if (strcmp(_fd##_n, _t) == 0) { \
-        CBOR_ASSERT(cbor_value_is_text_string(&_f##_n) == true); \
-        CBOR_CHECK(cbor_value_dup_text_string(&(_f##_n), &(_v).data, &(_v).len, &(_f##_n))); \
-        (_v).present = true; \
+        CBOR_FIELD_GET_TEXT(_v, _n); \
         continue; \
     }
 
 #define CBOR_FIELD_KEY_TEXT_VAL_BYTES(_n, _t, _v) \
     if (strcmp(_fd##_n, _t) == 0) { \
-        CBOR_ASSERT(cbor_value_is_byte_string(&_f##_n) == true); \
-        CBOR_CHECK(cbor_value_dup_byte_string(&(_f##_n), &(_v).data, &(_v).len, &(_f##_n))); \
-        (_v).present = true; \
+        CBOR_FIELD_GET_BYTES(_v, _n); \
         continue; \
     }
 

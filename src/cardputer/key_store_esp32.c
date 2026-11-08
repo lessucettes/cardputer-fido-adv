@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "bootloader_random.h"
 #include "esp_flash.h"
 #include "esp_partition.h"
 #include "esp_random.h"
@@ -142,9 +141,9 @@ int cardputer_key_store_init(void) {
 
     cf_key_status status = cf_key_store_load(&flash, &device_keys);
     if (status == CF_KEY_EMPTY) {
-        bootloader_random_enable();
+        /* random_init() already enabled the shared entropy source. Leave it
+         * running for subsequent protocol key generation and signatures. */
         status = cf_key_store_provision(&flash, &device_keys);
-        bootloader_random_disable();
     }
     if (status != CF_KEY_READY) {
         memset(&device_keys, 0, sizeof(device_keys));

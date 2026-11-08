@@ -102,6 +102,36 @@ static void test_timeout(void) {
     require(!bridge.pending(), "timed out request is no longer pending");
 }
 
+static void test_cancel_unconsumed_confirmation() {
+    for (RequestKind kind : {RequestKind::GetAssertion, RequestKind::Reset}) {
+        for (bool disconnect : {false, true}) {
+            PresenceBridge bridge;
+            bridge.start(0);
+            const auto generation = bridge.begin(kind, nullptr, 0, nullptr, 0,
+                                                  100, 1000);
+            tap(bridge, key_enter(), 200);
+            if (kind == RequestKind::Reset) {
+                require(bridge.take(generation) == PresenceResult::None,
+                        "reset needs a second confirmation");
+                tap(bridge, key_enter(), 300);
+            }
+            PresenceBridge stale = bridge;
+            stale.cancel(generation + 100, 301);
+            require(stale.take(generation) == PresenceResult::Confirmed,
+                    "stale cancellation must preserve a queued confirmation");
+            // USB disconnect uses active_generation; CTAPHID_CANCEL uses the
+            // generation retained by the waiting protocol operation.
+            bridge.cancel(disconnect ? bridge.active_generation() : generation,
+                          302);
+            require(bridge.take(generation) == PresenceResult::Cancelled,
+                    "cancellation must revoke an unconsumed confirmation");
+            bridge.cancel(generation, 303);
+            require(bridge.take(generation) == PresenceResult::None,
+                    "late cancellation cannot create another decision");
+        }
+    }
+}
+
 static void test_exclusion_prompt() {
     PresenceBridge bridge;
     bridge.start(0);
@@ -177,6 +207,7 @@ int main() {
     test_fresh_presence();
     test_stale_and_cancel();
     test_timeout();
+    test_cancel_unconsumed_confirmation();
     test_exclusion_prompt();
     test_reset_requires_two_presses();
     test_bounded_context();

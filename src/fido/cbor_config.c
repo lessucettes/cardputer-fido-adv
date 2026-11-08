@@ -203,7 +203,9 @@ int cbor_config(const uint8_t *data, size_t len) {
             flash_commit();
         }
         else if (vendorCommandId == CTAP_CONFIG_AUT_ENABLE) {
-            if (!file_has_data(ef_keydev)) {
+            /* This legacy lock format carries exactly 32 bytes. Tagged or
+             * PIN-wrapped records cannot fit or round-trip through UNLOCK. */
+            if (!file_has_data(ef_keydev) || file_get_size(ef_keydev) != 32) {
                 CBOR_ERROR(CTAP2_ERR_NOT_ALLOWED);
             }
             if (mse.init == false) {

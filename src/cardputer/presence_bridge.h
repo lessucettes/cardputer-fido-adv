@@ -26,7 +26,10 @@ public:
     PresenceResult take(std::uint32_t expected_generation);
     PresenceResult take_any(std::uint32_t* generation_out = nullptr);
 
-    std::uint32_t active_generation() const { return model_.active_generation(); }
+    std::uint32_t active_generation() const {
+        return model_.decision_pending() ? model_.decision_generation()
+                                         : model_.active_generation();
+    }
     bool pending() const { return model_.pending(); }
     const RequestInfo* active_request() const { return model_.active_request(); }
     Model& model() { return model_; }

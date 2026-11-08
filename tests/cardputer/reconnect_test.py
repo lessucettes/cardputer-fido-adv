@@ -69,6 +69,16 @@ def run_reconnect_suite(emulator_path: pathlib.Path, cycles: int = 100) -> None:
         assert get_info(hid), "channel unusable after length error"
         print("PASS: oversized HID reports are rejected")
 
+        # Reassembly accepts 7609 bytes, but echo must also fit the TX buffer.
+        for command in (PING, 0x3C):  # PING and legacy SYNC share the echo path.
+            expect_error(hid, hid.cid, command, bytes(7609), 0x03)
+            assert get_info(hid), "channel unusable after oversized echo"
+            for length in (0, 57, 58, 1024):
+                payload = bytes(index % 251 for index in range(length))
+                _, rcmd, echoed = hid.call(command, payload)
+                assert (rcmd & 0x7F) == command and echoed == payload
+        print("PASS: HID echo rejects TX overflow and preserves valid payloads")
+
         _, _, malformed = hid.call(CBOR, b"\x01\xff")
         assert len(malformed) == 1 and malformed[0] != 0, malformed
         assert get_info(hid), "channel unusable after malformed CBOR"
