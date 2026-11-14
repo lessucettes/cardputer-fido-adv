@@ -107,3 +107,8 @@ If the device does not enumerate after an update, stop and use the verified
 full-flash backup and documented recovery procedure. Do not regenerate keys or
 erase `fido_store` to make the device boot; that destroys the credential
 identity.
+
+For a previously saved password-encrypted microSD snapshot, see
+[BACKUP.md](BACKUP.md). This restores FIDO data only, on the same board; it does
+not restore Launcher or create a missing partition. An interrupted restore
+keeps USB disabled until a complete retry succeeds.

@@ -45,6 +45,9 @@
 #include "mbedtls/sha256.h"
 
 extern int rescue_migrate_keydev(void);
+#ifdef CARDPUTER_ADV
+extern void cardputer_backup_startup(void);
+#endif
 
 int picokey_board_init(void);
 void picokey_ui_task(void);
@@ -186,6 +189,10 @@ int main(void) {
 #endif
 
     random_init();
+
+#ifdef CARDPUTER_ADV
+    cardputer_backup_startup();
+#endif
 
     otp_init();
 

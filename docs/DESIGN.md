@@ -86,5 +86,24 @@ weakening their policy.
 
 - Secure element or trusted boot claims.
 - Password-protected local storage.
-- Backup/export of secrets.
+- Portable cross-device credential migration.
 - Support for arbitrary Launcher repartitioning.
+
+## Encrypted SD snapshots
+
+`backup_codec` streams the full store through PBKDF2-HMAC-SHA256 and
+AES-256-GCM with per-record authenticated header/index binding. `backup_store`
+applies checked sectors and commits the key pages last. `backup.cpp` owns the
+FAT SD adapter, masked password entry, generation publishing and persistent
+NVS recovery guard. No plaintext snapshot is written to SD.
+
+The local menu flushes storage and restarts into pre-USB maintenance, entered
+after RNG setup and before OTP/filesystem initialization. Damaged storage also
+exposes this restore-only mode instead of enabling USB. The guard is committed
+and read back before a restore can erase flash; it is cleared only after all
+records and final key pages have passed flash readback. Failure requires retry
+from the encrypted backup, not an atomic rollback. The supported layout must
+already exist and the serial binding limits restoration to the same board.
+
+See [BACKUP.md](BACKUP.md) for the format, user flow and hardware acceptance
+limitations.

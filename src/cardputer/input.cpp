@@ -97,6 +97,8 @@ void Board::flush_input_feedback() {
 }
 
 void Board::poll_input() {
+    for (volatile char& ch : typed_) { ch = 0; }
+    fn_held_ = false;
     // Bound feedback latency to one poll if the UI did not flush it right
     // after applying a settings change. Playing from here never sleeps.
     flush_input_feedback();
@@ -109,6 +111,16 @@ void Board::poll_input() {
     keyboard_.updateKeyList();
 
     const auto& positions = keyboard_.keyList();
+    bool shift = false;
+    bool suppress_text = false;
+    for (const auto& position : positions) {
+        const auto code = static_cast<std::uint8_t>(keyboard_.getKeyValue(position).value_first);
+        shift = shift || code == KEY_LEFT_SHIFT;
+        fn_held_ = fn_held_ || code == KEY_FN;
+        suppress_text = suppress_text || code == KEY_LEFT_CTRL || code == KEY_LEFT_ALT ||
+                        code == KEY_OPT || code == KEY_FN;
+    }
+    std::size_t typed_count = 0;
     std::uint64_t current_positions = 0;
     for (const auto& position : positions) {
         const std::uint64_t bit = position_bit(position);
@@ -117,9 +129,17 @@ void Board::poll_input() {
             const auto code = static_cast<std::uint8_t>(
                 keyboard_.getKeyValue(position).value_first);
             queue_input_feedback(tone_for_key(code));
+            const auto value = keyboard_.getKeyValue(position);
+            const auto character = static_cast<std::uint8_t>(shift ? value.value_second : value.value_first);
+            if (!suppress_text && code != KEY_ENTER && code != KEY_BACKSPACE &&
+                code != KEY_TAB && character >= 32 && character <= 126 &&
+                typed_count + 1 < sizeof(typed_)) {
+                typed_[typed_count++] = static_cast<char>(character);
+            }
         }
     }
     pressed_positions_ = current_positions;
+    typed_[typed_count] = '\0';
 
     keys_ = read_keys(keyboard_);
     service_audio();

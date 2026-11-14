@@ -1,6 +1,9 @@
 idf_component_register(
     SRCS
         board.cpp
+        backup.cpp
+        backup_codec.c
+        backup_store.c
         input.cpp
         display.cpp
         audio.cpp
@@ -29,4 +32,7 @@ idf_component_register(
         nvs_flash
         esp_partition
         esp_hw_support
+        fatfs
+        sdmmc
+        mbedtls
 )

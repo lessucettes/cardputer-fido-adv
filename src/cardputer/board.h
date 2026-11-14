@@ -22,6 +22,9 @@ public:
     bool keyboard_available() const { return keyboard_ok_; }
     void poll_input();
     Keys keys() const { return keys_; }
+    /* Fresh printable keys for local maintenance password entry only. */
+    const char* typed() const { return typed_; }
+    bool fn_held() const { return fn_held_; }
     static std::uint64_t now_ms();
     void render(const Snapshot& snapshot);
     void show_message(const char* title, const char* detail);
@@ -41,6 +44,8 @@ private:
 
     Keyboard_Class keyboard_;
     Keys keys_{};
+    char typed_[57] = {};
+    bool fn_held_ = false;
     bool keyboard_ok_ = false;
     bool rendered_ = false;
     std::uint32_t last_hash_ = 0;

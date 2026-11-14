@@ -93,7 +93,7 @@ class EntropyLifecycleTest(unittest.TestCase):
         store = (ROOT / "src/cardputer/key_store_esp32.c").read_text()
         random_bytes = store[store.index("static int random_bytes("):
                              store.index("static int validate_partition_table(")]
-        init = store[store.index("int cardputer_key_store_init(void)"):
+        init = store[store.index("int cardputer_key_store_prepare(void)"):
                      store.index("void otp_platform_init(")]
         with tempfile.TemporaryDirectory(prefix="cardputer-entropy-") as tmp:
             probe = pathlib.Path(tmp) / "probe.c"

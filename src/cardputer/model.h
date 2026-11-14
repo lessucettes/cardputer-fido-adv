@@ -6,8 +6,8 @@ namespace cardputer {
 
 enum class Decision { None, Confirm, Cancel, TimedOut };
 enum class RequestKind { Generic, MakeCredential, GetAssertion, Exclusion, Reset, Selection };
-enum class Screen { MainMenu, SavedKeys, KeyDetails, Settings, SettingsEdit, ConfirmDeleteKey };
-enum class ActionType { None, OpenSavedKeys, OpenSettings, PowerOff, DeleteKey, SaveSettings };
+enum class Screen { MainMenu, SavedKeys, KeyDetails, Settings, SettingsEdit, ConfirmDeleteKey, Backup };
+enum class ActionType { None, OpenSavedKeys, OpenSettings, PowerOff, DeleteKey, SaveSettings, BackupToSD, RestoreFromSD };
 enum class Layout { List, Carousel, Details, Prompt, Editor };
 enum class Icon { Key, Settings, Power, Volume, Sun, Clock, Lock, Trash, Request };
 
@@ -129,6 +129,7 @@ private:
     int key_index_ = 0;
     int settings_index_ = 0;
     int edit_field_ = 0;
+    int backup_index_ = 0;
     Settings settings_{};
     Settings draft_{};
     SavedKey saved_keys_[kMaxSavedKeys] = {};

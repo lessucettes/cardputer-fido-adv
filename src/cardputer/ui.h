@@ -15,6 +15,8 @@ enum {
 
 /* Called once before random/OTP initialization. */
 void cardputer_ui_init(void);
+/* Pre-USB maintenance entry, called after RNG initialization, before OTP. */
+void cardputer_backup_startup(void);
 /* Called from the owner loop; nonblocking. */
 void cardputer_ui_pump(void);
 /* Starts a fresh user-presence prompt and returns its generation. */
@@ -27,7 +29,7 @@ void cardputer_presence_cancel(uint32_t generation);
 uint32_t cardputer_presence_active(void);
 /* Selects the prompt kind for operations without an OP_MC/OP_GA marker. */
 void cardputer_presence_set_kind(int kind);
-/* Shows a fatal storage message and halts before USB is installed. */
+/* Enters storage recovery before USB is installed. Never returns. */
 void cardputer_storage_failure(int status);
 
 #ifdef __cplusplus

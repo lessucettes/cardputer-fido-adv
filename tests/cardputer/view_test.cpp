@@ -115,6 +115,15 @@ int main() {
         tap(model, back);
         tap(model, down);
     }
+    display = render(model);
+    require(display.output.find("Backup") != std::string::npos,
+            "backup card remains readable within the Settings carousel");
+    tap(model, enter);
+    display = render(model);
+    require(display.output.find("Backup to SD") != std::string::npos &&
+                display.output.find("Restore from SD") != std::string::npos,
+            "both local backup actions fit the physical display");
+    tap(model, back);
     tap(model, back);
     tap(model, down);
     render(model); // Power Off card, without executing its action.

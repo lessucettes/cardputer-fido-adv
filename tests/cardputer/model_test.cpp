@@ -225,7 +225,7 @@ static void test_settings() {
     tap(m, key_enter(), 200);
     Snapshot v = m.view();
     require(std::strcmp(v.title, "Settings") == 0, "settings screen");
-    require(v.row_count == 3, "three settings");
+    require(v.row_count == 4, "three settings and backup entry");
     require(std::strstr(v.rows[0].text, "Volume") != nullptr, "volume row");
     require(std::strstr(v.rows[1].text, "Brightness") != nullptr, "brightness row");
     require(std::strstr(v.rows[2].text, "Screen Timeout") != nullptr, "timeout row");
@@ -253,6 +253,30 @@ static void test_settings() {
     tap(m, key_del(), 900);
     v = m.view();
     require(std::strcmp(v.title, "Cardputer FIDO") == 0, "Del leaves settings");
+}
+
+static void test_backup_menu() {
+    Model m;
+    m.start(0);
+    tap(m, key_down(), 10);
+    tap(m, key_enter(), 20);
+    tap(m, key_up(), 30);
+    require(m.view().rows[3].selected, "Settings wraps to backup entry");
+    tap(m, key_enter(), 40);
+    require(m.screen() == Screen::Backup, "backup submenu opens");
+    Action action;
+    require(!m.take_action(&action), "opening backup submenu does not reboot");
+    tap(m, key_enter(), 50);
+    require(m.take_action(&action) && action.type == ActionType::BackupToSD,
+            "export selected explicitly");
+    require(!m.take_action(&action), "export request consumed once");
+    tap(m, key_down(), 60);
+    tap(m, key_enter(), 70);
+    require(m.take_action(&action) && action.type == ActionType::RestoreFromSD,
+            "restore selected explicitly");
+    tap(m, key_del(), 80);
+    require(m.screen() == Screen::Settings && !m.take_action(&action),
+            "back leaves submenu without a storage operation");
 }
 
 static void test_request_overlay() {
@@ -326,6 +350,7 @@ int main() {
     test_saved_keys();
     test_saved_keys_boundary();
     test_settings();
+    test_backup_menu();
     test_request_overlay();
     test_screen_off_snapshot();
     test_status_expiry();

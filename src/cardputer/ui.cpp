@@ -4,6 +4,7 @@
 
 #include "M5Unified.h"
 #include "board.h"
+#include "backup.h"
 #include "credential_service.h"
 #ifdef ESP_PLATFORM
 #include "freertos/FreeRTOS.h"
@@ -13,6 +14,7 @@ extern "C" {
 #include "file.h"
 #include "flash.h"
 }
+#include "esp_system.h"
 #include "presence_bridge.h"
 #include "settings.h"
 #include "tusb.h"
@@ -50,11 +52,34 @@ bool usb_mounted = false;
 int presence_kind_override = -1;
 volatile bool power_off_started = false;
 volatile bool power_off_failed = false;
+volatile bool backup_started = false;
+volatile bool backup_failed = false;
+BackupMode requested_backup = BackupMode::None;
 volatile uint32_t usb_sof_ms = 0;
 volatile bool usb_sof_seen = false;
 volatile bool usb_suspended = false;
 
 #ifdef ESP_PLATFORM
+void backup_reboot_task(void*) {
+    // Stop accepting host traffic before the final flush. The owner loop
+    // continues pumping the existing request and the flash task while waiting.
+    tud_disconnect();
+    vTaskDelay(pdMS_TO_TICKS(250));
+    const std::uint64_t started = Board::now_ms();
+    while (is_busy() && Board::now_ms() - started < 35000) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    if (is_busy() || !flash_commit_sync(5000) || !request_backup_mode(requested_backup)) {
+        // A failed flush must not discard dirty RAM by rebooting. Keep the
+        // running authenticator, reconnect and report failure on its UI owner.
+        tud_connect();
+        backup_failed = true;
+        vTaskDelete(nullptr);
+        return;
+    }
+    esp_restart();
+}
+
 void power_off_task(void*) {
     if (!flash_commit_sync(5000)) {
         power_off_failed = true;
@@ -117,7 +142,24 @@ void refresh_saved_keys() {
 
 void handle_action(const Action& action) {
     Model& model = bridge.model();
+    if (backup_started || power_off_started) {
+        return;
+    }
     switch (action.type) {
+        case ActionType::BackupToSD:
+        case ActionType::RestoreFromSD:
+            if (is_busy()) {
+                model.set_status("Request in progress", Board::now_ms());
+                break;
+            }
+            requested_backup = action.type == ActionType::BackupToSD ? BackupMode::Save : BackupMode::Restore;
+            backup_started = true;
+            model.set_status("Restarting for SD...", Board::now_ms());
+            if (xTaskCreate(backup_reboot_task, "fido_backup_boot", 4096, nullptr, 1, nullptr) != pdPASS) {
+                backup_started = false;
+                model.set_status("Backup start failed", Board::now_ms());
+            }
+            break;
         case ActionType::OpenSavedKeys:
             if (cf_credential_request_list(&credentials) != CF_CRED_OK) {
                 model.set_status("Request in progress", Board::now_ms());
@@ -292,6 +334,13 @@ extern "C" void cardputer_ui_pump(void) {
         board.play(Tone::Failure);
     }
 
+    if (backup_failed) {
+        backup_failed = false;
+        backup_started = false;
+        model.set_status("Backup start failed", Board::now_ms());
+        board.play(Tone::Failure);
+    }
+
     board.render(model.view());
     ui_unlock();
 }
@@ -358,10 +407,11 @@ extern "C" void cardputer_presence_set_kind(int kind) {
 
 extern "C" void cardputer_storage_failure(int status) {
     (void)status;
-    board.show_message("Storage error", "The key store could not be read");
-    for (;;) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    backup_recovery(board);
+}
+
+extern "C" void cardputer_backup_startup(void) {
+    backup_startup(board);
 }
 
 extern "C" int picokey_board_init(void) {

@@ -112,11 +112,7 @@ static int validate_partition_table(void) {
     return 0;
 }
 
-int cardputer_key_store_init(void) {
-    if (initialized) {
-        return store_status;
-    }
-    initialized = 1;
+int cardputer_key_store_prepare(void) {
     fido_partition = esp_partition_find_first(CF_FIDO_PART_TYPE,
                                               CF_FIDO_PART_SUBTYPE,
                                               CF_FIDO_PART_LABEL);
@@ -128,6 +124,18 @@ int cardputer_key_store_init(void) {
     if (validation != 0) {
         store_status = validation;
         fido_partition = NULL;
+        return store_status;
+    }
+
+    return 0;
+}
+
+int cardputer_key_store_init(void) {
+    if (initialized) {
+        return store_status;
+    }
+    initialized = 1;
+    if (cardputer_key_store_prepare() != 0) {
         return store_status;
     }
 

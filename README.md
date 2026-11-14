@@ -22,6 +22,8 @@ the image above is generated from the production LCD layout code.
 - Resident credentials can be listed and deleted locally after a fresh
   confirmation.
 - Volume, brightness and screen timeout are stored in NVS.
+- Password-encrypted microSD backup/restore under `Settings` ->
+  `Backup & Restore`; snapshots are for the same physical Cardputer.
 - Fail-closed key store: the firmware refuses to start if the required
   `fido_store` partition is missing, malformed or overlapping.
 
@@ -82,7 +84,10 @@ secure element.
   credential deletion is not guaranteed forensic erasure.
 - App updates are not signed or verified by this firmware. A malicious
   Launcher image, partition change or firmware replacement has full control.
-- No backup/export. Losing or reformatting the device loses its credentials.
+- Recovery needs a previously saved, readable backup and its password. New
+  registrations after the snapshot are not recoverable from it; the backup
+  does not support migration to another board. Hardware acceptance of the SD
+  recovery flow remains pending; see [backup and restore](docs/BACKUP.md).
 - The code has not been independently audited or FIDO-certified; side-channel
   and fault attacks are outside the current scope.
 
@@ -93,6 +98,7 @@ authenticator for accounts that matter.
 
 - [`docs/BUILD.md`](docs/BUILD.md) — host, emulator and firmware builds
 - [`docs/DESIGN.md`](docs/DESIGN.md) — architecture and storage decisions
+- [`docs/BACKUP.md`](docs/BACKUP.md) — encrypted microSD backup and recovery
 - [`docs/INSTALL-LAUNCHER.md`](docs/INSTALL-LAUNCHER.md) — Launcher installation
 - [`docs/HARDWARE-VALIDATION.md`](docs/HARDWARE-VALIDATION.md) — hardware checks
 

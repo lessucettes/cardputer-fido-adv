@@ -28,6 +28,13 @@ These tests do not need ESP-IDF, M5Unified, TPM, network or a real
 authenticator. They compile the platform-independent Cardputer logic with
 AddressSanitizer and UndefinedBehaviorSanitizer:
 
+The backup tests also compile the SDK's pinned Mbed TLS sources. If
+`pico-keys-sdk/third-party/mbedtls` has not been fetched yet, configure the
+deterministic emulator below first. The independent AES-GCM oracle uses
+Python `cryptography` (also a dependency of the pinned `fido2` client); select
+that environment with `-DPython3_EXECUTABLE=/path/to/venv/bin/python` when
+configuring the native tests.
+
 ```sh
 cmake -S tests/cardputer -B build/cardputer-host -G Ninja \
   -DCMAKE_BUILD_TYPE=Debug -DCARDPUTER_SANITIZERS=ON
@@ -36,10 +43,14 @@ ctest --test-dir build/cardputer-host --output-on-failure -R '^cardputer_'
 ```
 
 Expected GREEN: exit 0, all selected tests pass, no sanitizer diagnostics.
-Observed on the current candidate: nine native tests pass
+The original native checks cover
 (`cardputer_model`, `cardputer_settings`, `cardputer_audio`, `cardputer_text`,
 `cardputer_view`, `cardputer_key_store`, `cardputer_flash_layout`,
-`cardputer_presence_bridge`, `cardputer_credential_service`).
+`cardputer_presence_bridge`, `cardputer_credential_service`). Additional
+`cardputer_backup_*` tests exercise encrypted full-store recovery, malformed
+and unauthenticated files, NOR flash failures, key-page commit ordering and an
+independent Python AES-GCM/PBKDF2 oracle. The KDF uses the production work
+factor, so the sanitized crypto scenarios take longer than UI unit tests.
 
 The audio test models the pinned M5Unified 0.2.13 speaker contract, where
 `playRaw()` reports success even when `begin()` fails, and checks that a
@@ -83,6 +94,28 @@ under one RP, RP mismatch, persistence across an emulator restart, and the
 synthetic reconnect/fragment-timeout cases. Observed on the current candidate:
 all cases pass. Hardware USB reconnect, browser interaction and the physical
 presence prompt remain separate manual gates.
+
+### Encrypted-backup credential continuity
+
+After building the native targets and emulator, run:
+
+```sh
+.venv-protocol/bin/python tests/cardputer/backup_protocol_test.py \
+  --emulator build/emulator/pico_fido \
+  --tool build/cardputer-host/cardputer_backup_protocol_tool
+```
+
+This registers two resident credentials and one nonresident credential, exports
+the generated filesystem and roots through the production backup codec, applies
+the encrypted snapshot through the production restore engine, recreates the
+emulator's storage/root state and verifies the original IDs and assertion
+signatures without enrolling again. A different-root control must fail.
+
+The host emulator has a different filesystem address space and a separate OTP
+file. The test explicitly bridges those test-only layouts; it does not prove
+the ESP partition adapter, physical USB, SD card, keyboard or interrupted-write
+behavior on a real board. Run protocol suites sequentially: they share a fixed
+TCP listener.
 
 ## Firmware build
 

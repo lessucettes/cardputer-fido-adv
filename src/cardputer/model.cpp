@@ -56,6 +56,7 @@ void Model::start(std::uint64_t now) {
     key_index_ = 0;
     settings_index_ = 0;
     edit_field_ = 0;
+    backup_index_ = 0;
     saved_key_count_ = 0;
     action_ = {};
     status_[0] = '\0';
@@ -238,15 +239,29 @@ void Model::navigate(Keys keys) {
 
         case Screen::Settings:
             if (up) {
-                settings_index_ = (settings_index_ + 2) % 3;
+                settings_index_ = (settings_index_ + 3) % 4;
             } else if (down) {
-                settings_index_ = (settings_index_ + 1) % 3;
+                settings_index_ = (settings_index_ + 1) % 4;
             } else if (enter) {
-                draft_ = settings_;
-                edit_field_ = settings_index_;
-                screen_ = Screen::SettingsEdit;
+                if (settings_index_ == 3) {
+                    screen_ = Screen::Backup;
+                } else {
+                    draft_ = settings_;
+                    edit_field_ = settings_index_;
+                    screen_ = Screen::SettingsEdit;
+                }
             } else if (del) {
                 screen_ = Screen::MainMenu;
+            }
+            break;
+
+        case Screen::Backup:
+            if (del) {
+                screen_ = Screen::Settings;
+            } else if (up || down) {
+                backup_index_ = 1 - backup_index_;
+            } else if (enter) {
+                action_.type = backup_index_ == 0 ? ActionType::BackupToSD : ActionType::RestoreFromSD;
             }
             break;
 
@@ -420,7 +435,7 @@ Snapshot Model::view() const {
         case Screen::Settings:
             out.layout = Layout::Carousel;
             out.title = "Settings";
-            out.row_count = 3;
+            out.row_count = 4;
             {
                 char buffer[48];
                 std::snprintf(buffer, sizeof(buffer), "Volume  %u", settings_.volume);
@@ -430,10 +445,19 @@ Snapshot Model::view() const {
                 std::snprintf(buffer, sizeof(buffer), "Screen Timeout  %s",
                               screen_timeout_labels[settings_.timeout_index]);
                 set_line(&out.rows[2], buffer, settings_index_ == 2);
+                set_line(&out.rows[3], "Backup & Restore", settings_index_ == 3);
             }
             out.rows[0].icon = Icon::Volume;
             out.rows[1].icon = Icon::Sun;
             out.rows[2].icon = Icon::Clock;
+            out.rows[3].icon = Icon::Lock;
+            out.footer = "ENT:OK DEL:BACK";
+            break;
+        case Screen::Backup:
+            out.title = "Backup & Restore";
+            out.row_count = 2;
+            set_line(&out.rows[0], "Backup to SD", backup_index_ == 0);
+            set_line(&out.rows[1], "Restore from SD", backup_index_ == 1);
             out.footer = "ENT:OK DEL:BACK";
             break;
         case Screen::SettingsEdit: {
