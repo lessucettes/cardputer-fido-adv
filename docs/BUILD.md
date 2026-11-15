@@ -57,6 +57,14 @@ The audio test models the pinned M5Unified 0.2.13 speaker contract, where
 pending tone is kept until the speaker actually starts. It does not verify
 physical audio output.
 
+The audio checks also cover mute discarding old queued feedback, rapid input
+not overwriting a playing sample buffer, and the mixer-start busy deadline.
+`cardputer_display` and `cardputer_display_fallback` exercise the production
+board renderer with recording panel/canvas adapters: unchanged-frame caching,
+text-field boundaries, hidden status expiry during prompts, sleep/wake, and
+direct rendering when canvas allocation fails. These checks establish draw
+and scheduling behavior, not physical flicker or real-time audio latency.
+
 The view test exercises the production LCD layout on a recording display:
 240x135 bounds, nonoverlapping text, minimum 2x Font0 size, menu navigation,
 setting values, identity rows, destructive warnings and confirmation hints.

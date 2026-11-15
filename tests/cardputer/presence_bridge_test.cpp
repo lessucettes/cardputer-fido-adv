@@ -153,6 +153,12 @@ static void test_reset_requires_two_presses() {
                      1000);
 
     tap(bridge, key_enter(), 200);
+    require(bridge.model().view().layout == Layout::Prompt,
+            "reset must not flash the menu before the protocol takes stage one");
+    tap(bridge, key_enter(), 210);
+    Action action;
+    require(!bridge.model().take_action(&action),
+            "queued presence decision must not let keys activate the menu");
     require(bridge.take(generation) == PresenceResult::None,
             "first Enter only arms the deletion");
     require(bridge.pending(), "reset remains pending after arming");

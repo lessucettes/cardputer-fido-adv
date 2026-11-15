@@ -51,6 +51,14 @@ target_include_directories(cardputer_audio PRIVATE "${CMAKE_CURRENT_LIST_DIR}/au
 # Match the ESP32-S3 char ABI used by the keyboard header's key codes.
 target_compile_options(cardputer_audio PRIVATE -funsigned-char)
 
+cardputer_add_cxx_test(cardputer_display
+    display_test.cpp
+    "${ROOT}/src/cardputer/display.cpp"
+)
+target_include_directories(cardputer_display PRIVATE "${CMAKE_CURRENT_LIST_DIR}/display_stub")
+target_compile_options(cardputer_display PRIVATE -funsigned-char)
+add_test(NAME cardputer_display_fallback COMMAND cardputer_display --no-canvas)
+
 cardputer_add_cxx_test(cardputer_text
     text_test.cpp
     "${ROOT}/src/cardputer/text.cpp"

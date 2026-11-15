@@ -205,6 +205,36 @@ static void test_saved_keys() {
     require(std::strcmp(v.title, "Saved Keys") == 0, "Del returns to list");
 }
 
+static void test_saved_key_refresh_identity() {
+    for (bool confirmation : {false, true}) {
+        Model m;
+        m.start(0);
+        SavedKey keys[2] = {};
+        keys[0].id_len = keys[1].id_len = 32;
+        keys[0].id[0] = 1;
+        keys[1].id[0] = 2;
+        std::strcpy(keys[0].rp_id, "a.example");
+        std::strcpy(keys[1].rp_id, "b.example");
+        m.set_saved_keys(keys, 2);
+        tap(m, key_enter(), 10);
+        Action action;
+        (void)m.take_action(&action);
+        tap(m, key_enter(), 20);
+        if (confirmation) { tap(m, key_enter(), 30); }
+
+        SavedKey reordered[2] = {keys[1], keys[0]};
+        m.set_saved_keys(reordered, 2);
+        require(std::strcmp(m.view().rows[0].text, "a.example") == 0,
+                "list reorder must preserve the open credential identity");
+        m.set_saved_keys(&keys[1], 1);
+        require(m.screen() == Screen::SavedKeys,
+                "removing the open key returns to the list, not another key");
+        tap(m, key_enter(), 40);
+        require(!m.take_action(&action),
+                "Enter after refresh must not delete a replacement key");
+    }
+}
+
 static void test_saved_keys_boundary() {
     Model m;
     m.start(0);
@@ -348,6 +378,7 @@ int main() {
     test_appendix_a();
     test_main_menu();
     test_saved_keys();
+    test_saved_key_refresh_identity();
     test_saved_keys_boundary();
     test_settings();
     test_backup_menu();

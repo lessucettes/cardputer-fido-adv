@@ -46,6 +46,10 @@ void Board::set_volume(std::uint8_t percent) {
         percent = 100;
     }
     volume_ = percent;
+    if (volume_ == 0) {
+        // Do not replay pre-mute feedback when volume is restored later.
+        audio_queued_ = false;
+    }
     M5.Speaker.setVolume(static_cast<std::uint8_t>(percent * 255u / 100u));
     // A volume key press is detected before the model applies the new draft
     // volume. Replay queued feedback now so the first increase from mute is

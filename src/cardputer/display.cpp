@@ -9,14 +9,13 @@ namespace cardputer {
 namespace {
 
 std::uint32_t hash_text(std::uint32_t hash, const char* text) {
-    if (text == nullptr) {
-        return hash;
-    }
-    while (*text != '\0') {
+    while (text != nullptr && *text != '\0') {
         hash ^= static_cast<std::uint8_t>(*text++);
         hash *= 16777619u;
     }
-    return hash;
+    // Include the terminator: ("A", "BC") and ("AB", "C") are different
+    // frames even though their concatenated bytes are identical.
+    return hash * 16777619u;
 }
 
 M5Canvas frame_canvas(&M5.Display);
@@ -49,7 +48,11 @@ void Board::render(const Snapshot& snapshot) {
 
     std::uint32_t hash = 2166136261u;
     hash = hash_text(hash, snapshot.title);
-    hash = hash_text(hash, snapshot.status);
+    // Prompts do not draw the menu status. Its expiry must not trigger a
+    // direct-panel clear and redraw while the user reads a confirmation.
+    if (snapshot.layout != Layout::Prompt) {
+        hash = hash_text(hash, snapshot.status);
+    }
     hash = hash_text(hash, snapshot.footer);
     hash = hash_text(hash, snapshot.value);
     hash ^= static_cast<std::uint32_t>(snapshot.layout);

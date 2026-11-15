@@ -78,7 +78,7 @@ void Model::tick(std::uint64_t now) {
     if (status_[0] != '\0' && now - status_since_ >= 3000) {
         status_[0] = '\0';
     }
-    if (!pending_ && screen_timeout_ != 0 &&
+    if (!pending_ && !decision_pending() && screen_timeout_ != 0 &&
         now - last_activity_ >= screen_timeout_) {
         screen_on_ = false;
     }
@@ -99,6 +99,27 @@ void Model::set_saved_keys(const SavedKey* keys, int count) {
     if (count > kMaxSavedKeys) {
         count = kMaxSavedKeys;
     }
+    if (screen_ == Screen::KeyDetails || screen_ == Screen::ConfirmDeleteKey) {
+        // A refresh can reorder or remove entries. Never retarget an open
+        // detail/confirmation screen merely because its row index was reused.
+        const SavedKey* selected = saved_key(key_index_);
+        int retained = -1;
+        if (selected != nullptr && keys != nullptr &&
+            selected->id_len <= sizeof(selected->id)) {
+            for (int i = 0; i < count; ++i) {
+                if (selected->id_len == keys[i].id_len &&
+                    std::memcmp(selected->id, keys[i].id, selected->id_len) == 0) {
+                    retained = i;
+                    break;
+                }
+            }
+        }
+        if (retained < 0) {
+            screen_ = Screen::SavedKeys;
+        } else {
+            key_index_ = retained;
+        }
+    }
     saved_key_count_ = count;
     if (keys != nullptr) {
         for (int i = 0; i < saved_key_count_; ++i) {
@@ -108,11 +129,6 @@ void Model::set_saved_keys(const SavedKey* keys, int count) {
         saved_key_count_ = 0;
     }
     key_index_ = clamp_index(key_index_, saved_key_count_);
-    if (screen_ == Screen::KeyDetails || screen_ == Screen::ConfirmDeleteKey) {
-        if (saved_key_count_ == 0) {
-            screen_ = Screen::SavedKeys;
-        }
-    }
 }
 
 const SavedKey* Model::saved_key(int index) const {
@@ -156,6 +172,12 @@ void Model::key_snapshot(Keys keys, std::uint64_t now) {
         if (!keys.any) {
             blocked_until_release_ = false;
         }
+        return;
+    }
+    if (!pending_ && decision_pending()) {
+        // Keep the overlay and input ownership until the protocol consumes
+        // this decision, including the handoff between the two reset stages.
+        previous_ = keys;
         return;
     }
     if (pending_) {
@@ -327,7 +349,7 @@ Snapshot Model::view() const {
     if (!screen_on_) {
         return out;
     }
-    if (pending_) {
+    if (pending_ || decision_pending()) {
         out.layout = Layout::Prompt;
         out.icon = request_.kind == RequestKind::Reset ? Icon::Trash : Icon::Request;
         switch (request_.kind) {

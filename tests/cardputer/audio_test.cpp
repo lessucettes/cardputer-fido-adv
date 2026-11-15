@@ -2,6 +2,7 @@
 #include "M5Unified.h"
 
 #include <cassert>
+#include <algorithm>
 
 TestM5 M5;
 static std::uint64_t now = 0;
@@ -32,4 +33,37 @@ int main() {
     now = 2000;
     board.service_audio();
     assert(M5.Speaker.accepted == 1);
+
+    // Muting must discard an event waiting behind an active sound. Otherwise
+    // leaving mute replays old feedback unrelated to the current key press.
+    board.play(cardputer::Tone::KeyPress);
+    board.play(cardputer::Tone::Failure);
+    assert(M5.Speaker.accepted == 2);
+    board.set_volume(0);
+    M5.Speaker.playing = false;
+    now = 3000;
+    board.set_volume(30);
+    assert(M5.Speaker.accepted == 2);
+    board.play(cardputer::Tone::Navigate);
+    assert(M5.Speaker.accepted == 3);
+
+    // Rapid input must neither overwrite the DMA source nor start a second
+    // voice. Only the newest pending event is kept, without a long backlog.
+    for (int i = 0; i < 20; ++i) {
+        board.play(cardputer::Tone::Confirm);
+    }
+    assert(M5.Speaker.accepted == 3);
+    assert(std::equal(M5.Speaker.active_samples.begin(),
+                      M5.Speaker.active_samples.end(), M5.Speaker.active_data));
+    M5.Speaker.playing = false;
+    now = 3001; // Mixer may report idle before the explicit busy deadline.
+    board.service_audio();
+    assert(M5.Speaker.accepted == 3);
+    now = 4000;
+    board.service_audio();
+    assert(M5.Speaker.accepted == 4);
+    M5.Speaker.playing = false;
+    now = 5000;
+    board.service_audio();
+    assert(M5.Speaker.accepted == 4);
 }

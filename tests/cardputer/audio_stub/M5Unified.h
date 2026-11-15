@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 // Models the pinned M5Unified 0.2.13 startup contract, including playRaw's
 // true return without accepting data when begin() fails.
@@ -10,6 +11,8 @@ struct TestSpeaker {
     bool available = false;
     bool playing = false;
     unsigned accepted = 0;
+    const std::int16_t* active_data = nullptr;
+    std::vector<std::int16_t> active_samples;
 
     bool begin() { return available; }
     void setVolume(std::uint8_t) {}
@@ -26,6 +29,8 @@ struct TestSpeaker {
         assert(data != nullptr && samples > 0 && samples <= 2400);
         assert(rate == 16000 && !stereo && repeat == 1 && channel == 0);
         assert(!playing);
+        active_data = data;
+        active_samples.assign(data, data + samples);
         playing = true;
         ++accepted;
         return true;
